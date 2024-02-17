@@ -1,10 +1,15 @@
+mod lexer;
+mod parser;
+
 use std::{
     env,
     fmt::{Debug, Display, Formatter},
     fs::File,
     io::Read,
-    iter::Peekable,
 };
+
+use lexer::Lexer;
+use parser::parse;
 
 fn read_file(name: &String) -> std::io::Result<String> {
     let mut txt = String::new();
@@ -13,7 +18,7 @@ fn read_file(name: &String) -> std::io::Result<String> {
     Ok(txt)
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 struct Loc<'a> {
     path: &'a String,
     line: usize,
@@ -56,82 +61,10 @@ impl<'a> Loc<'a> {
     }
 }
 
-#[derive(Debug)]
-struct Token<'a> {
-    loc: Loc<'a>,
-    data: TokenData,
-}
-
-#[derive(Debug)]
-enum TokenData {
-    Name(String),
-    LParen,
-    RParen,
-    StrLit(String),
-    Semicolon,
-}
-
-struct Lexer<'a, T: Iterator<Item = char>> {
-    loc: Loc<'a>,
-    code: Peekable<T>,
-}
-
-impl<'a, T: Iterator<Item = char>> Lexer<'a, T> {
-    fn from_iter(path: &'a String, iter: T) -> Self {
-        Self {
-            loc: Loc::new(path),
-            code: iter.peekable(),
-        }
-    }
-}
-
 #[allow(dead_code)]
 fn logpoint<T: Display>(val: T) -> T {
     println!("{val}");
     val
-}
-
-impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
-    type Item = Token<'a>;
-    fn next(&mut self) -> Option<Token<'a>> {
-        Some(Token {
-            loc: self.loc,
-            data: match self.loc.advance(self.code.next()?) {
-                '(' => TokenData::LParen,
-                ')' => TokenData::RParen,
-                ';' => TokenData::Semicolon,
-                ch if ch.is_alphabetic() => {
-                    let mut name = String::new();
-
-                    name.push(ch);
-                    while let Some(ch) = self.code.peek() {
-                        if !ch.is_alphanumeric() {
-                            break;
-                        }
-                        name.push(self.loc.advance(self.code.next().expect("We were able to peek tho")));
-                    }
-
-                    TokenData::Name(name)
-                }
-                '"' => {
-                    let mut string = String::new();
-
-                    while let Some(ch) = self.code.next() {
-                        self.loc.advance(ch);
-                        if ch == '"' {
-                            break;
-                        }
-                        string.push(ch);
-                    }
-
-                    TokenData::StrLit(string)
-                }
-                ch if ch.is_whitespace() => self.next()?.data, // ignore
-
-                ch => panic!("Invalid char: {ch}"),
-            },
-        })
-    }
 }
 
 fn main() -> std::io::Result<()> {
@@ -141,8 +74,11 @@ fn main() -> std::io::Result<()> {
     let filename = args.next().expect("Please provide a program");
     let code = read_file(&filename)?;
 
-    for tok in Lexer::from_iter(&filename, code.chars()) {
-        println!("{tok:?}");
+    let lexer = Lexer::from_iter(&filename, code.chars());
+
+    match parse(lexer) {
+        Ok(node) => println!("{node:?}"),
+        Err(err) => eprintln!("{err:?}")
     }
 
     Ok(())
