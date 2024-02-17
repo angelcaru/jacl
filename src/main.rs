@@ -1,9 +1,11 @@
+mod ir;
 mod lexer;
 mod loc;
 mod parser;
 
 use std::{env, fs::File, io::Read};
 
+use ir::Program;
 use lexer::Lexer;
 use parser::parse;
 
@@ -23,10 +25,9 @@ fn main() -> std::io::Result<()> {
 
     let lexer = Lexer::from_iter(&filename, code.chars());
 
-    match parse(lexer) {
-        Ok(node) => println!("{node:?}"),
-        Err(err) => eprintln!("{err:?}"),
-    }
+    let ast = parse(lexer).unwrap();
+
+    Program::from_ast(&ast).disassemble();
 
     Ok(())
 }
