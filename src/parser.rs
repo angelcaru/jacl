@@ -6,7 +6,7 @@ pub type NodeList = Vec<Node>;
 pub enum Node {
     FuncCall(String, NodeList),
     StrLit(String),
-    Block(NodeList)
+    Block(NodeList),
 }
 
 // TODO: Provide details for parse error
@@ -18,13 +18,14 @@ type ParseResult<T> = Result<T, ParseError>;
 pub fn parse<'a, T: Iterator<Item = Token<'a>>>(lexer: T) -> ParseResult<Node> {
     Parser {
         lexer: lexer.collect(),
-        i: 0
-    }.parse_block()
+        i: 0,
+    }
+    .parse_block()
 }
 
 struct Parser<'a> {
     lexer: Vec<Token<'a>>,
-    i: usize
+    i: usize,
 }
 
 /*
@@ -47,11 +48,12 @@ impl<'a> Parser<'a> {
 
             while let Some(TokenData::Semicolon) = self.nom() {
                 let st = self.parse_statement();
-                if st.is_err() {break;}
+                if st.is_err() {
+                    break;
+                }
                 let st = st.unwrap();
                 statements.push(st);
             }
-
         }
 
         Ok(Node::Block(statements))
@@ -60,14 +62,14 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> ParseResult<Node> {
         if let Some(TokenData::Name(name)) = self.nom() {
             let name = name.clone();
-            
+
             self.expect(TokenData::LParen)?;
             if let Some(TokenData::StrLit(string)) = self.nom() {
                 let string = string.clone();
                 self.expect(TokenData::RParen)?;
                 Ok(Node::FuncCall(name, vec![Node::StrLit(string)]))
             } else {
-                Err(ParseError)   
+                Err(ParseError)
             }
         } else {
             Err(ParseError)

@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::Loc;
+use crate::loc::Loc;
 
 #[derive(Debug, PartialEq)]
 pub struct Token<'a> {
