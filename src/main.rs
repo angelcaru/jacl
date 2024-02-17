@@ -2,9 +2,11 @@ mod ir;
 mod lexer;
 mod loc;
 mod parser;
+mod codegen;
 
 use std::{env, fs::File, io::Read};
 
+use codegen::x86_64::Compile;
 use ir::Program;
 use lexer::Lexer;
 use parser::parse;
@@ -27,7 +29,11 @@ fn main() -> std::io::Result<()> {
 
     let ast = parse(lexer).unwrap();
 
-    Program::from_ast(&ast).disassemble();
+    let prog = Program::from_ast(&ast);
+
+    prog.disassemble();
+
+    prog.compile_to_asm("asm/out.asm")?;
 
     Ok(())
 }
