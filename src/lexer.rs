@@ -58,7 +58,14 @@ impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
                 '+' => TokenData::Plus,
                 '-' => TokenData::Minus,
                 '*' => TokenData::Mult,
-                '/' => TokenData::Div,
+                '/' => {
+                    if let Some('/') = self.code.peek() {
+                        while self.loc.advance(self.code.next()?) != '\n' {}
+                        self.next()?.data
+                    } else {
+                        TokenData::Div
+                    }
+                },
                 ch if ch.is_alphabetic() || ch == '_' => {
                     let mut name = String::new();
 

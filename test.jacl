@@ -1,4 +1,4 @@
-let msg = "Hello";
+let msg = "Hello"; // This is a comment
 print(msg);
 msg = "World!";
 print(msg);
