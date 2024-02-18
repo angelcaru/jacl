@@ -89,6 +89,15 @@ impl Program {
                     panic!("Undeclared variable: {}", name);
                 }
             }
+            Node::VarAssign(name, node) => {
+                if let Some(idx) = self.vars.iter().position(|x| x == name) {
+                    let value = self.visit(node);
+                    self.code.push(Instruction::VarAssign(idx, value));
+                    Value::Void
+                } else {
+                    panic!("Undeclared variable: {}", name);
+                }
+            }
         }
     }
 }

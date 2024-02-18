@@ -8,7 +8,8 @@ pub enum Node {
     StrLit(String),
     Block(NodeList),
     VarDecl(String, Box<Node>),
-    VarAccess(String)
+    VarAccess(String),
+    VarAssign(String, Box<Node>),
 }
 
 // TODO: Provide details for parse error
@@ -65,10 +66,18 @@ impl<'a> Parser<'a> {
             TokenData::Name(name) => {
                 let name = name.clone();
 
-                self.expect(TokenData::LParen)?;
-                let args = vec![self.parse_expr()?];
-                self.expect(TokenData::RParen)?;
-                Ok(Node::FuncCall(name, args))
+                match self.nom() {
+                    Some(TokenData::LParen) => {
+                        let args = vec![self.parse_expr()?];
+                        self.expect(TokenData::RParen)?;
+                        Ok(Node::FuncCall(name, args))
+                    }
+                    Some(TokenData::Equals) => {
+                        let value = self.parse_expr()?;
+                        Ok(Node::VarAssign(name, Box::new(value)))
+                    }
+                    _ => Err(ParseError("Expected '('".into())),
+                }
             }
             TokenData::Let => {
                 if let Some(TokenData::Name(name)) = self.nom() {
@@ -86,12 +95,8 @@ impl<'a> Parser<'a> {
 
     fn parse_expr(&mut self) -> ParseResult<Node> {
         match self.nom().ok_or(ParseError("Expected expression".into()))? {
-            TokenData::StrLit(string) => {
-                Ok(Node::StrLit(string.clone()))
-            }
-            TokenData::Name(name) => {
-                Ok(Node::VarAccess(name.clone()))
-            }
+            TokenData::StrLit(string) => Ok(Node::StrLit(string.clone())),
+            TokenData::Name(name) => Ok(Node::VarAccess(name.clone())),
             _ => Err(ParseError("Expected expression".into())),
         }
     }
