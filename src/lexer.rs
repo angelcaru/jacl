@@ -27,6 +27,9 @@ pub enum TokenData {
     Greater,
     LtEq,
     GtEq,
+    If,
+    LCurly,
+    RCurly,
 }
 
 pub struct Lexer<'a, T: Iterator<Item = char>> {
@@ -46,6 +49,7 @@ impl<'a, T: Iterator<Item = char>> Lexer<'a, T> {
 fn keyword_or_name(name: &str) -> TokenData {
     match name {
         "let" => TokenData::Let,
+        "if" => TokenData::If,
         name => TokenData::Name(name.into())
     }
 }
@@ -62,6 +66,8 @@ impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
                 '+' => TokenData::Plus,
                 '-' => TokenData::Minus,
                 '*' => TokenData::Mult,
+                '{' => TokenData::LCurly,
+                '}' => TokenData::RCurly,
                 '=' => {
                     if let Some('=') = self.code.peek() {
                         self.loc.advance(self.code.next().unwrap());

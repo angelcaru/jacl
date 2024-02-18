@@ -3,7 +3,8 @@ use crate::parser::{BinOp, CmpOp, Node};
 pub struct Program {
     pub strings: Vec<String>,
     pub code: Vec<Instruction>,
-    pub vars: Vec<String>
+    pub vars: Vec<String>,
+    pub label_count: usize,
 }
 
 #[derive(Debug)]
@@ -20,6 +21,8 @@ pub enum Value {
 pub enum Instruction {
     FuncCall(String, Vec<Value>),
     VarAssign(usize, Value),
+    Label(usize),
+    JmpIfZero(Value, usize),
 }
 
 impl Program {
@@ -47,7 +50,7 @@ impl Program {
         let strings = Vec::new();
         let code = Vec::new();
         let vars = Vec::new();
-        let mut prog = Program { strings, code, vars };
+        let mut prog = Program { strings, code, vars, label_count: 0 };
 
         prog.visit(node);
 
@@ -121,6 +124,21 @@ impl Program {
 
                 Value::CmpOp(*op, Box::new(a), Box::new(b))
             }
+            Node::If { cond, then_branch } => {
+                let cond = self.visit(cond);
+
+                self.code.push(Instruction::JmpIfZero(cond, self.label_count));
+
+                self.visit(then_branch);
+                self.add_label();
+
+                Value::Void
+            }
         }
+    }
+
+    fn add_label(&mut self) {
+        self.code.push(Instruction::Label(self.label_count));
+        self.label_count += 1;
     }
 }

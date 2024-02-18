@@ -30,11 +30,15 @@ pub enum Node {
     Int(usize),
     BinOp(BinOp, Box<Node>, Box<Node>),
     CmpOp(CmpOp, Box<Node>, Box<Node>),
+    If {cond: Box<Node>, then_branch: Box<Node>},
 }
 
 // TODO: Provide details for parse error
 #[derive(Debug)]
-pub struct ParseError(String);
+pub enum ParseError {
+    Error(String),
+    BlockEnding
+}
 
 type ParseResult<T> = Result<T, ParseError>;
 
@@ -62,6 +66,7 @@ macro_rules! expect_pattern {
 }
 */
 
+use ParseError::Error;
 impl<'a> Parser<'a> {
     fn parse_block(&mut self) -> ParseResult<Node> {
         println!("{:#?}", self.lexer);
@@ -74,7 +79,11 @@ impl<'a> Parser<'a> {
             if self.is_empty() {
                 break;
             }
-            let st = self.parse_statement()?;
+            let res = self.parse_statement();
+            if let Err(ParseError::BlockEnding) = res {
+                break;
+            }
+            let st = res?;
             statements.push(st);
         }
 
@@ -82,7 +91,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_statement(&mut self) -> ParseResult<Node> {
-        match self.nom().ok_or(ParseError(line!().to_string()))? {
+        match self.nom().ok_or(Error(line!().to_string()))? {
             TokenData::Name(name) => {
                 let name = name.clone();
 
@@ -96,7 +105,7 @@ impl<'a> Parser<'a> {
                         let value = self.parse_expr()?;
                         Ok(Node::VarAssign(name, Box::new(value)))
                     }
-                    _ => Err(ParseError("Expected '('".into())),
+                    _ => Err(Error("Expected '('".into())),
                 }
             }
             TokenData::Let => {
@@ -106,15 +115,26 @@ impl<'a> Parser<'a> {
 
                     Ok(Node::VarDecl(name, Box::new(self.parse_expr()?)))
                 } else {
-                    Err(ParseError(line!().to_string()))
+                    Err(Error(line!().to_string()))
                 }
             }
-            _ => Err(ParseError(line!().to_string())),
+            TokenData::If => {
+                let cond = self.parse_expr()?;
+
+                self.expect(TokenData::LCurly)?;
+                let then_branch = self.parse_block()?;
+                // NOTE: We don't need this because parse_block() already handles the '}'
+                //self.expect(TokenData::RCurly)?;
+
+                Ok(Node::If { cond: Box::new(cond), then_branch: Box::new(then_branch) })
+            }
+            TokenData::RCurly => Err(ParseError::BlockEnding),
+            _ => Err(Error(line!().to_string())),
         }
     }
 
     fn parse_expr(&mut self) -> ParseResult<Node> {
-        match self.nom().ok_or(ParseError("Expected expression".into()))? {
+        match self.nom().ok_or(Error("Expected expression".into()))? {
             TokenData::StrLit(string) => Ok(Node::StrLit(string.clone())),
             TokenData::Name(name) => Ok(Node::VarAccess(name.clone())),
             TokenData::Int(int) => Ok(Node::Int(*int)),
@@ -130,7 +150,7 @@ impl<'a> Parser<'a> {
             TokenData::LtEq => self.parse_cmp_op(CmpOp::LtEq),
             TokenData::GtEq => self.parse_cmp_op(CmpOp::GtEq),
             
-            _ => Err(ParseError("Expected expression".into())),
+            _ => Err(Error("Expected expression".into())),
         }
     }
 
@@ -166,7 +186,7 @@ impl<'a> Parser<'a> {
         if self.nom() == Some(&tok) {
             Ok(())
         } else {
-            Err(ParseError(line!().to_string()))
+            Err(Error(line!().to_string()))
         }
     }
 

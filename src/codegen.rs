@@ -67,6 +67,14 @@ pub mod x86_64 {
                 move_value_into_register(f, value, Register::Rdi)?;
                 f.write_all(format!("    mov [rbp-{}], rdi\n", id * 8).as_bytes())?;
             }
+            Label(id) => {
+                f.write_all(format!("label{id}:\n").as_bytes())?;
+            }
+            JmpIfZero(cond, label_id) => {
+                move_value_into_register(f, cond, Register::Rax)?;
+                f.write_all(b"    test rax, rax\n")?;
+                f.write_all(format!("    jz label{label_id}\n").as_bytes())?;
+            }
         }
 
         Ok(())
