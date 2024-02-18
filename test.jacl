@@ -3,6 +3,6 @@ print(msg);
 msg = "World!";
 print(msg);
 
-let test = 69;
-printNum(test);
-printNum(420);
+let test_num = 69;
+print_num(test_num);
+print_num(420);

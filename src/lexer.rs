@@ -51,12 +51,12 @@ impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
                 ')' => TokenData::RParen,
                 ';' => TokenData::Semicolon,
                 '=' => TokenData::Equals,
-                ch if ch.is_alphabetic() => {
+                ch if ch.is_alphabetic() || ch == '_' => {
                     let mut name = String::new();
 
                     name.push(ch);
-                    while let Some(ch) = self.code.peek() {
-                        if !ch.is_alphanumeric() {
+                    while let Some(&ch) = self.code.peek() {
+                        if !(ch.is_alphanumeric() || ch == '_') {
                             break;
                         }
                         name.push(

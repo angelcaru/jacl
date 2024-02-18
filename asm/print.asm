@@ -2,7 +2,7 @@ format ELF64
 
 section '.text' executable
 public print
-public printNum
+public print_num
 print:
     mov rax, 1
 
@@ -22,7 +22,7 @@ print:
     pop rax
     ret
 
-; printNum function compiled on https://godbolt.org/ from the following C code:
+; print_num function compiled on https://godbolt.org/ from the following C code:
 ;
 ; void print(const char *buf);
 ; 
@@ -49,7 +49,7 @@ print:
 ; }
 ; 
 
-printNum:
+print_num:
         sub     rsp, 40
         test    rdi, rdi
         je      .L8
