@@ -7,7 +7,7 @@ pub mod x86_64 {
 
     use crate::{
         ir::{Instruction, Program, Value},
-        parser::BinOp,
+        parser::{BinOp, CmpOp},
     };
 
     pub trait Compile {
@@ -145,6 +145,23 @@ pub mod x86_64 {
                         BinOp::Div => panic!("unreachable"),
                     })?;
                 }
+
+                f.write_all(format!("    mov {}, rax\n", reg).as_bytes())?;
+            }
+            Value::CmpOp(op, a, b) => {
+                move_value_into_register(f, a, Register::Rax)?;
+                move_value_into_register(f, b, Register::Rbx)?;
+
+                f.write_all(b"    cmp rax, rbx\n")?;
+                f.write_all(b"    mov rax, 0\n")?;
+                f.write_all(b"    mov rbx, 1\n")?;
+                f.write_all(match op {
+                    CmpOp::Less    => b"    cmovb rax, rbx\n",
+                    CmpOp::Equal   => b"    cmove rax, rbx\n",
+                    CmpOp::Greater => b"    cmova rax, rbx\n",
+                    CmpOp::LtEq    => b"    cmovbe rax, rbx\n",
+                    CmpOp::GtEq    => b"    cmovae rax, rbx\n",
+                })?;
 
                 f.write_all(format!("    mov {}, rax\n", reg).as_bytes())?;
             }

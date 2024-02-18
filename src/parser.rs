@@ -7,7 +7,16 @@ pub enum BinOp {
     Plus,
     Minus,
     Mult,
-    Div
+    Div,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum CmpOp {
+    Less,
+    Equal,
+    Greater,
+    LtEq,
+    GtEq,
 }
 
 #[derive(Debug)]
@@ -20,6 +29,7 @@ pub enum Node {
     VarAssign(String, Box<Node>),
     Int(usize),
     BinOp(BinOp, Box<Node>, Box<Node>),
+    CmpOp(CmpOp, Box<Node>, Box<Node>),
 }
 
 // TODO: Provide details for parse error
@@ -108,32 +118,34 @@ impl<'a> Parser<'a> {
             TokenData::StrLit(string) => Ok(Node::StrLit(string.clone())),
             TokenData::Name(name) => Ok(Node::VarAccess(name.clone())),
             TokenData::Int(int) => Ok(Node::Int(*int)),
-            TokenData::Plus => {
-                let a = self.parse_expr()?;
-                let b = self.parse_expr()?;
 
-                Ok(Node::BinOp(BinOp::Plus, Box::new(a), Box::new(b)))
-            }
-            TokenData::Minus => {
-                let a = self.parse_expr()?;
-                let b = self.parse_expr()?;
+            TokenData::Plus => self.parse_bin_op(BinOp::Plus),
+            TokenData::Minus => self.parse_bin_op(BinOp::Minus),
+            TokenData::Mult => self.parse_bin_op(BinOp::Mult),
+            TokenData::Div => self.parse_bin_op(BinOp::Div),
 
-                Ok(Node::BinOp(BinOp::Minus, Box::new(a), Box::new(b)))
-            }
-            TokenData::Mult => {
-                let a = self.parse_expr()?;
-                let b = self.parse_expr()?;
-
-                Ok(Node::BinOp(BinOp::Mult, Box::new(a), Box::new(b)))
-            }
-            TokenData::Div => {
-                let a = self.parse_expr()?;
-                let b = self.parse_expr()?;
-
-                Ok(Node::BinOp(BinOp::Div, Box::new(a), Box::new(b)))
-            }
+            TokenData::Less => self.parse_cmp_op(CmpOp::Less),
+            TokenData::EqEq => self.parse_cmp_op(CmpOp::Equal),
+            TokenData::Greater => self.parse_cmp_op(CmpOp::Greater),
+            TokenData::LtEq => self.parse_cmp_op(CmpOp::LtEq),
+            TokenData::GtEq => self.parse_cmp_op(CmpOp::GtEq),
+            
             _ => Err(ParseError("Expected expression".into())),
         }
+    }
+
+    fn parse_bin_op(&mut self, op: BinOp) -> ParseResult<Node> {
+        let a = self.parse_expr()?;
+        let b = self.parse_expr()?;
+
+        Ok(Node::BinOp(op, Box::new(a), Box::new(b)))
+    }
+
+    fn parse_cmp_op(&mut self, op: CmpOp) -> ParseResult<Node> {
+        let a = self.parse_expr()?;
+        let b = self.parse_expr()?;
+
+        Ok(Node::CmpOp(op, Box::new(a), Box::new(b)))
     }
 
     /*

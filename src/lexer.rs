@@ -22,6 +22,11 @@ pub enum TokenData {
     Minus,
     Mult,
     Div,
+    Less,
+    EqEq,
+    Greater,
+    LtEq,
+    GtEq,
 }
 
 pub struct Lexer<'a, T: Iterator<Item = char>> {
@@ -54,10 +59,33 @@ impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
                 '(' => TokenData::LParen,
                 ')' => TokenData::RParen,
                 ';' => TokenData::Semicolon,
-                '=' => TokenData::Equals,
                 '+' => TokenData::Plus,
                 '-' => TokenData::Minus,
                 '*' => TokenData::Mult,
+                '=' => {
+                    if let Some('=') = self.code.peek() {
+                        self.loc.advance(self.code.next().unwrap());
+                        TokenData::EqEq
+                    } else {
+                        TokenData::Equals
+                    }
+                }
+                '<' => {
+                    if let Some('=') = self.code.peek() {
+                        self.loc.advance(self.code.next().unwrap());
+                        TokenData::LtEq
+                    } else {
+                        TokenData::Less
+                    }
+                }
+                '>' => {
+                    if let Some('=') = self.code.peek() {
+                        self.loc.advance(self.code.next().unwrap());
+                        TokenData::GtEq
+                    } else {
+                        TokenData::Greater
+                    }
+                }
                 '/' => {
                     if let Some('/') = self.code.peek() {
                         while self.loc.advance(self.code.next()?) != '\n' {}

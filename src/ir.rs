@@ -1,4 +1,4 @@
-use crate::parser::{BinOp, Node};
+use crate::parser::{BinOp, CmpOp, Node};
 
 pub struct Program {
     pub strings: Vec<String>,
@@ -12,7 +12,8 @@ pub enum Value {
     String(usize),
     FromVar(usize),
     Int(usize),
-    BinOp(BinOp, Box<Value>, Box<Value>)
+    BinOp(BinOp, Box<Value>, Box<Value>),
+    CmpOp(CmpOp, Box<Value>, Box<Value>),
 }
 
 #[derive(Debug)]
@@ -113,6 +114,12 @@ impl Program {
                 let b = self.visit(b);
 
                 Value::BinOp(*op, Box::new(a), Box::new(b))
+            }
+            Node::CmpOp(op, a, b) => {
+                let a = self.visit(a);
+                let b = self.visit(b);
+
+                Value::CmpOp(*op, Box::new(a), Box::new(b))
             }
         }
     }
