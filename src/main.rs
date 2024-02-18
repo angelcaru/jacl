@@ -26,13 +26,11 @@ fn main() -> std::io::Result<()> {
     let code = read_file(&filename)?;
 
     let lexer = Lexer::from_iter(&filename, code.chars());
-
     let ast = parse(lexer).unwrap();
-
+    println!("{ast:?}");
     let prog = Program::from_ast(&ast);
 
     prog.disassemble();
-
     prog.compile_to_asm("asm/out.asm")?;
 
     Ok(())

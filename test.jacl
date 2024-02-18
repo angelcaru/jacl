@@ -1,4 +1,4 @@
-print("Hello, World!");
-print("Foo, Bar!");
-print("Test, Me!");
-
+let msg = "Variables!";
+let msg2 = "Constants!";
+print(msg);
+print(msg2);

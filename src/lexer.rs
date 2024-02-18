@@ -15,6 +15,8 @@ pub enum TokenData {
     RParen,
     StrLit(String),
     Semicolon,
+    Let,
+    Equals,
 }
 
 pub struct Lexer<'a, T: Iterator<Item = char>> {
@@ -31,6 +33,13 @@ impl<'a, T: Iterator<Item = char>> Lexer<'a, T> {
     }
 }
 
+fn keyword_or_name(name: &str) -> TokenData {
+    match name {
+        "let" => TokenData::Let,
+        name => TokenData::Name(name.into())
+    }
+}
+
 impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
     type Item = Token<'a>;
     fn next(&mut self) -> Option<Token<'a>> {
@@ -40,6 +49,7 @@ impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
                 '(' => TokenData::LParen,
                 ')' => TokenData::RParen,
                 ';' => TokenData::Semicolon,
+                '=' => TokenData::Equals,
                 ch if ch.is_alphabetic() => {
                     let mut name = String::new();
 
@@ -54,7 +64,7 @@ impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
                         );
                     }
 
-                    TokenData::Name(name)
+                    keyword_or_name(&name)
                 }
                 '"' => {
                     let mut string = String::new();
