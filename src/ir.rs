@@ -11,6 +11,7 @@ pub enum Value {
     Void,
     String(usize),
     FromVar(usize),
+    Int(usize)
 }
 
 #[derive(Debug)]
@@ -97,6 +98,9 @@ impl Program {
                 } else {
                     panic!("Undeclared variable: {}", name);
                 }
+            }
+            &Node::Int(int) => {
+                Value::Int(int)
             }
         }
     }

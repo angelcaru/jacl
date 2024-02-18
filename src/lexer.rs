@@ -17,6 +17,7 @@ pub enum TokenData {
     Semicolon,
     Let,
     Equals,
+    Int(usize)
 }
 
 pub struct Lexer<'a, T: Iterator<Item = char>> {
@@ -78,6 +79,22 @@ impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
                     }
 
                     TokenData::StrLit(string)
+                }
+                ch if ch.is_digit(10) => {
+                    let mut number = String::new();
+
+                    number.push(ch);
+                    while let Some(ch) = self.code.peek() {
+                        if !ch.is_digit(10) {
+                            break;
+                        }
+                        number.push(
+                            self.loc
+                                .advance(self.code.next().expect("We were able to peek tho")),
+                        );
+                    }
+
+                    TokenData::Int(number.parse().unwrap())
                 }
                 ch if ch.is_whitespace() => self.next()?.data, // ignore
 

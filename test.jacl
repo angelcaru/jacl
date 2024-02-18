@@ -2,3 +2,7 @@ let msg = "Hello";
 print(msg);
 msg = "World!";
 print(msg);
+
+let test = 69;
+printNum(test);
+printNum(420);

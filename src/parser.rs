@@ -10,6 +10,7 @@ pub enum Node {
     VarDecl(String, Box<Node>),
     VarAccess(String),
     VarAssign(String, Box<Node>),
+    Int(usize),
 }
 
 // TODO: Provide details for parse error
@@ -97,6 +98,7 @@ impl<'a> Parser<'a> {
         match self.nom().ok_or(ParseError("Expected expression".into()))? {
             TokenData::StrLit(string) => Ok(Node::StrLit(string.clone())),
             TokenData::Name(name) => Ok(Node::VarAccess(name.clone())),
+            TokenData::Int(int) => Ok(Node::Int(*int)),
             _ => Err(ParseError("Expected expression".into())),
         }
     }

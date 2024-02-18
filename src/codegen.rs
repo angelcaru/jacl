@@ -13,7 +13,8 @@ pub mod x86_64 {
 
             f.write_all(b"format ELF64 \n")?;
             f.write_all(b"section '.text' executable\n")?;
-            f.write_all(b"extrn print\n")?; // TODO: unhardcode function(s)
+            f.write_all(b"extrn print\n")?; // TODO: unhardcode functions
+            f.write_all(b"extrn printNum\n")?;
             f.write_all(b"public _start\n")?;
             f.write_all(b"_start:\n")?;
             f.write_all(b"    push rbp\n")?;
@@ -67,13 +68,14 @@ pub mod x86_64 {
     fn move_value_into_rdi(f: &mut File, value: &Value) -> std::io::Result<()> {
         match value {
             Value::Void => {}
-            Value::String(id) => {
-                let id = *id;
+            &Value::String(id) => {
                 f.write_all(format!("    mov rdi, str{id}\n").as_bytes())?;
             }
-            Value::FromVar(id) => {
-                let id = *id;
+            &Value::FromVar(id) => {
                 f.write_all(format!("    mov rdi, [rbp-{}]\n", id * 8).as_bytes())?;
+            }
+            &Value::Int(int) => {
+                f.write_all(format!("    mov rdi, {int}\n").as_bytes())?;
             }
         }
         Ok(())
