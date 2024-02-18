@@ -29,6 +29,11 @@ impl Program {
             println!("  {i}: {string:?}");
         }
 
+        println!("Variables: ");
+        for (i, name) in self.vars.iter().enumerate() {
+            println!("  {i}: {name}");
+        }
+
         println!("Code: ");
         for inst in &self.code {
             println!("  {inst:?}");
