@@ -1,7 +1,14 @@
 pub mod x86_64 {
-    use std::{fs::File, io::Write};
+    use std::{
+        fmt::{Display, Formatter},
+        fs::File,
+        io::Write,
+    };
 
-    use crate::ir::{Instruction, Program, Value};
+    use crate::{
+        ir::{Instruction, Program, Value},
+        parser::BinOp,
+    };
 
     pub trait Compile {
         fn compile_to_asm(&self, path: &str) -> std::io::Result<()>;
@@ -52,12 +59,12 @@ pub mod x86_64 {
                 assert_eq!(args.len(), 1); // Parser doesn't support it, why should we?
                 let arg = &args[0];
 
-                move_value_into_rdi(f, arg)?;
+                move_value_into_register(f, arg, Register::Rdi)?;
 
                 f.write_all(format!("    call {name}\n").as_bytes())?;
             }
             VarAssign(id, value) => {
-                move_value_into_rdi(f, value)?;
+                move_value_into_register(f, value, Register::Rdi)?;
                 f.write_all(format!("    mov [rbp-{}], rdi\n", id * 8).as_bytes())?;
             }
         }
@@ -65,17 +72,81 @@ pub mod x86_64 {
         Ok(())
     }
 
-    fn move_value_into_rdi(f: &mut File, value: &Value) -> std::io::Result<()> {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy)]
+    enum Register {
+        Rax,
+        Rbx,
+        Rcx,
+        Rdx,
+        Rbp,
+        Rsp,
+        Rsi,
+        Rdi,
+        R8,
+        R9,
+        R10,
+        R11,
+        R12,
+        R13,
+        R14,
+        R15,
+    }
+
+    impl Display for Register {
+        fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
+            fmt.write_str(match self {
+                Register::Rax => "rax",
+                Register::Rbx => "rbx",
+                Register::Rcx => "rcx",
+                Register::Rdx => "rdx",
+                Register::Rbp => "rbp",
+                Register::Rsp => "rsp",
+                Register::Rsi => "rsi",
+                Register::Rdi => "rdi",
+                Register::R8 => "r8",
+                Register::R9 => "r9",
+                Register::R10 => "r10",
+                Register::R11 => "r11",
+                Register::R12 => "r12",
+                Register::R13 => "r13",
+                Register::R14 => "r14",
+                Register::R15 => "r15",
+            })
+        }
+    }
+
+    fn move_value_into_register(f: &mut File, value: &Value, reg: Register) -> std::io::Result<()> {
         match value {
             Value::Void => {}
             &Value::String(id) => {
-                f.write_all(format!("    mov rdi, str{id}\n").as_bytes())?;
+                f.write_all(format!("    mov {}, str{id}\n", reg).as_bytes())?;
             }
             &Value::FromVar(id) => {
-                f.write_all(format!("    mov rdi, [rbp-{}]\n", id * 8).as_bytes())?;
+                f.write_all(format!("    mov {}, [rbp-{}]\n", reg, id * 8).as_bytes())?;
             }
             &Value::Int(int) => {
-                f.write_all(format!("    mov rdi, {int}\n").as_bytes())?;
+                f.write_all(format!("    mov {}, {int}\n", reg).as_bytes())?;
+            }
+            Value::BinOp(op, a, b) => {
+                move_value_into_register(f, a, Register::Rax)?;
+                move_value_into_register(f, b, Register::Rbx)?;
+
+                if let BinOp::Div = op {
+                    f.write_all(b"    push rdx\n")?;
+                    f.write_all(b"    xor rdx, rdx\n")?;
+                    f.write_all(b"    div rbx\n")?;
+                    f.write_all(b"    pop rdx\n")?;
+                } else {
+                    f.write_all(match op {
+                        BinOp::Plus => b"    add rax, rbx\n",
+                        BinOp::Minus => b"    sub rax, rbx\n",
+                        BinOp::Mult => b"    mul rbx\n",
+                        BinOp::Div => panic!("unreachable"),
+                    })?;
+                }
+
+                f.write_all(format!("    mov {}, rax\n", reg).as_bytes())?;
             }
         }
         Ok(())

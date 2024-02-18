@@ -17,7 +17,11 @@ pub enum TokenData {
     Semicolon,
     Let,
     Equals,
-    Int(usize)
+    Int(usize),
+    Plus,
+    Minus,
+    Mult,
+    Div,
 }
 
 pub struct Lexer<'a, T: Iterator<Item = char>> {
@@ -51,6 +55,10 @@ impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
                 ')' => TokenData::RParen,
                 ';' => TokenData::Semicolon,
                 '=' => TokenData::Equals,
+                '+' => TokenData::Plus,
+                '-' => TokenData::Minus,
+                '*' => TokenData::Mult,
+                '/' => TokenData::Div,
                 ch if ch.is_alphabetic() || ch == '_' => {
                     let mut name = String::new();
 

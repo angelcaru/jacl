@@ -2,6 +2,14 @@ use crate::lexer::{Token, TokenData};
 
 pub type NodeList = Vec<Node>;
 
+#[derive(Debug, Clone, Copy)]
+pub enum BinOp {
+    Plus,
+    Minus,
+    Mult,
+    Div
+}
+
 #[derive(Debug)]
 pub enum Node {
     FuncCall(String, NodeList),
@@ -11,6 +19,7 @@ pub enum Node {
     VarAccess(String),
     VarAssign(String, Box<Node>),
     Int(usize),
+    BinOp(BinOp, Box<Node>, Box<Node>),
 }
 
 // TODO: Provide details for parse error
@@ -99,6 +108,30 @@ impl<'a> Parser<'a> {
             TokenData::StrLit(string) => Ok(Node::StrLit(string.clone())),
             TokenData::Name(name) => Ok(Node::VarAccess(name.clone())),
             TokenData::Int(int) => Ok(Node::Int(*int)),
+            TokenData::Plus => {
+                let a = self.parse_expr()?;
+                let b = self.parse_expr()?;
+
+                Ok(Node::BinOp(BinOp::Plus, Box::new(a), Box::new(b)))
+            }
+            TokenData::Minus => {
+                let a = self.parse_expr()?;
+                let b = self.parse_expr()?;
+
+                Ok(Node::BinOp(BinOp::Minus, Box::new(a), Box::new(b)))
+            }
+            TokenData::Mult => {
+                let a = self.parse_expr()?;
+                let b = self.parse_expr()?;
+
+                Ok(Node::BinOp(BinOp::Mult, Box::new(a), Box::new(b)))
+            }
+            TokenData::Div => {
+                let a = self.parse_expr()?;
+                let b = self.parse_expr()?;
+
+                Ok(Node::BinOp(BinOp::Div, Box::new(a), Box::new(b)))
+            }
             _ => Err(ParseError("Expected expression".into())),
         }
     }
