@@ -1,10 +1,17 @@
+mod codegen;
 mod ir;
 mod lexer;
 mod loc;
 mod parser;
-mod codegen;
 
-use std::{env, fs::File, io::Read};
+use shell_quote::{Bash, QuoteRefExt};
+use std::{
+    env::{self, set_current_dir},
+    fs::{read_dir, File},
+    io::Read,
+    os::unix::process::ExitStatusExt,
+    process::{exit, Command, ExitStatus},
+};
 
 use codegen::x86_64::Compile;
 use ir::Program;
@@ -16,6 +23,24 @@ fn read_file(name: &String) -> std::io::Result<String> {
     let mut file = File::open(name)?;
     file.read_to_string(&mut txt)?;
     Ok(txt)
+}
+
+#[allow(suspicious_double_ref_op)] // That's what I wanted to do, idiot compiler!
+fn run_cmd(cmd: &[String]) -> std::io::Result<ExitStatus> {
+    print!("[CMD] ");
+    for arg in cmd {
+        let arg = arg.clone();
+        let quoted: String = arg.quoted(Bash);
+        print!("{} ", quoted);
+    }
+    print!("\n");
+
+    let mut command = Command::new(cmd[0].clone());
+    for arg in &cmd[1..] {
+        command.arg(arg);
+    }
+    let mut process = command.spawn()?;
+    process.wait()
 }
 
 fn main() -> std::io::Result<()> {
@@ -31,7 +56,39 @@ fn main() -> std::io::Result<()> {
     let prog = Program::from_ast(&ast);
 
     prog.disassemble();
-    prog.compile_to_asm("asm/out.asm")?;
+
+    set_current_dir("./asm")?;
+    prog.compile_to_asm("out.asm")?;
+
+    for file in read_dir(".")? {
+        let file_name = file?.file_name();
+        let file_name = file_name.to_str().unwrap();
+        if file_name.ends_with(".asm") {
+            let code = run_cmd(&["fasm".into(), file_name.into()])?;
+            if !code.success() {
+                eprintln!("[ERROR] fasm exited with code {}", code.into_raw());
+                exit(1);
+            }
+        }
+    }
+
+    let mut args = vec!["ld".into()];
+    for file in read_dir(".")? {
+        let file_name = file?.file_name();
+        let file_name = file_name.to_str().unwrap();
+        if file_name.ends_with(".o") {
+            args.push(file_name.to_string());
+        }
+    }
+    
+    args.extend(["-o".into(), "test".into()]);
+    let code = run_cmd(&args[..])?;
+    if !code.success() {
+        eprintln!("[ERROR] ld exited with code {}", code.into_raw());
+        exit(1);
+    }
+    
+    println!("[INFO] Success! Finished binary is at asm/test");
 
     Ok(())
 }
