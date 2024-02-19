@@ -32,8 +32,8 @@ print_num(> 10 20);
 
 if > 2024 1969 {
     print("Yeah!");
-}; // TODO: don't require semicolons after 'if' statements
+}
 
 if > 1969 2024 {
     print("No!");
-};
+}

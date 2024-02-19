@@ -72,13 +72,10 @@ impl<'a> Parser<'a> {
         println!("{:#?}", self.lexer);
         let mut statements = Vec::new();
 
-        let st = self.parse_statement()?;
-        statements.push(st);
+        // let st = self.parse_statement()?;
+        // statements.push(st);
 
-        while let Some(TokenData::Semicolon) = self.nom() {
-            if self.is_empty() {
-                break;
-            }
+        while !self.is_empty() {
             let res = self.parse_statement();
             if let Err(ParseError::BlockEnding) = res {
                 break;
@@ -91,7 +88,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_statement(&mut self) -> ParseResult<Node> {
-        match self.nom().ok_or(Error(line!().to_string()))? {
+        let res = match self.nom().ok_or(Error(line!().to_string()))? {
             TokenData::Name(name) => {
                 let name = name.clone();
 
@@ -126,11 +123,14 @@ impl<'a> Parser<'a> {
                 // NOTE: We don't need this because parse_block() already handles the '}'
                 //self.expect(TokenData::RCurly)?;
 
-                Ok(Node::If { cond: Box::new(cond), then_branch: Box::new(then_branch) })
+                // We use return to avoid handling semicolon
+                return Ok(Node::If { cond: Box::new(cond), then_branch: Box::new(then_branch) });
             }
             TokenData::RCurly => Err(ParseError::BlockEnding),
             _ => Err(Error(line!().to_string())),
-        }
+        }?;
+        self.expect(TokenData::Semicolon)?;
+        Ok(res)
     }
 
     fn parse_expr(&mut self) -> ParseResult<Node> {
