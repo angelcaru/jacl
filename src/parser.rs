@@ -96,7 +96,6 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> ParseResult<Node> {
-        let loc = self.loc();
         let res = match self.nom().expect("On EOF we shouldn't be here") {
             TokenData::Name(name) => {
                 let name = name.clone();
