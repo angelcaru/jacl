@@ -75,6 +75,9 @@ pub mod x86_64 {
                 f.write_all(b"    test rax, rax\n")?;
                 f.write_all(format!("    jz label{label_id}\n").as_bytes())?;
             }
+            Jmp(label_id) => {
+                f.write_all(format!("    jmp label{label_id}\n").as_bytes())?;
+            }
         }
 
         Ok(())

@@ -30,14 +30,18 @@ pub enum Node {
     Int(usize),
     BinOp(BinOp, Box<Node>, Box<Node>),
     CmpOp(CmpOp, Box<Node>, Box<Node>),
-    If {cond: Box<Node>, then_branch: Box<Node>},
+    If {
+        cond: Box<Node>,
+        then_branch: Box<Node>,
+        else_branch: Option<Box<Node>>,
+    },
 }
 
 // TODO: Provide details for parse error
 #[derive(Debug)]
 pub enum ParseError {
     Error(String),
-    BlockEnding
+    BlockEnding,
 }
 
 type ParseResult<T> = Result<T, ParseError>;
@@ -123,8 +127,25 @@ impl<'a> Parser<'a> {
                 // NOTE: We don't need this because parse_block() already handles the '}'
                 //self.expect(TokenData::RCurly)?;
 
-                // We use return to avoid handling semicolon
-                return Ok(Node::If { cond: Box::new(cond), then_branch: Box::new(then_branch) });
+                if let Some(TokenData::Else) = self.peek() {
+                    self.nom();
+
+                    self.expect(TokenData::LCurly)?;
+                    let else_branch = self.parse_block()?;
+
+                    return Ok(Node::If {
+                        cond: Box::new(cond),
+                        then_branch: Box::new(then_branch),
+                        else_branch: Some(Box::new(else_branch)),
+                    });
+                } else {
+                    // We use return to avoid handling semicolon
+                    return Ok(Node::If {
+                        cond: Box::new(cond),
+                        then_branch: Box::new(then_branch),
+                        else_branch: None,
+                    });
+                }
             }
             TokenData::RCurly => Err(ParseError::BlockEnding),
             _ => Err(Error(line!().to_string())),
@@ -149,7 +170,7 @@ impl<'a> Parser<'a> {
             TokenData::Greater => self.parse_cmp_op(CmpOp::Greater),
             TokenData::LtEq => self.parse_cmp_op(CmpOp::LtEq),
             TokenData::GtEq => self.parse_cmp_op(CmpOp::GtEq),
-            
+
             _ => Err(Error("Expected expression".into())),
         }
     }
@@ -188,6 +209,10 @@ impl<'a> Parser<'a> {
         } else {
             Err(Error(line!().to_string()))
         }
+    }
+
+    fn peek(&self) -> Option<&TokenData> {
+        Some(&self.lexer.get(self.i)?.data)
     }
 
     fn nom(&mut self) -> Option<&TokenData> {

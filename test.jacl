@@ -32,8 +32,12 @@ print_num(> 10 20);
 
 if > 2024 1969 {
     print("Yeah!");
+} else {
+    print("Idiot.");
 }
 
 if > 1969 2024 {
     print("No!");
+} else {
+    print("Of course.");
 }

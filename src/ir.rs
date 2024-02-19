@@ -5,6 +5,7 @@ pub struct Program {
     pub code: Vec<Instruction>,
     pub vars: Vec<String>,
     pub label_count: usize,
+    backpatch_stack: Vec<usize>,
 }
 
 #[derive(Debug)]
@@ -23,6 +24,21 @@ pub enum Instruction {
     VarAssign(usize, Value),
     Label(usize),
     JmpIfZero(Value, usize),
+    Jmp(usize),
+}
+
+impl Instruction {
+    fn backpatch(&mut self, label_id: usize) {
+        match self {
+            Self::JmpIfZero(_, i) => {
+                *i = label_id;
+            }
+            Self::Jmp(i) => {
+                *i = label_id;
+            }
+            _ => panic!("backpatch() called on non-jump instruction: {:?}", self)
+        }
+    }
 }
 
 impl Program {
@@ -50,7 +66,13 @@ impl Program {
         let strings = Vec::new();
         let code = Vec::new();
         let vars = Vec::new();
-        let mut prog = Program { strings, code, vars, label_count: 0 };
+        let mut prog = Program {
+            strings,
+            code,
+            vars,
+            label_count: 0,
+            backpatch_stack: Vec::new()
+        };
 
         prog.visit(node);
 
@@ -60,10 +82,7 @@ impl Program {
     fn visit(&mut self, node: &Node) -> Value {
         match node {
             Node::FuncCall(name, args) => {
-                let args: Vec<_> = args
-                    .iter()
-                    .map(|arg| self.visit(arg))
-                    .collect();
+                let args: Vec<_> = args.iter().map(|arg| self.visit(arg)).collect();
 
                 self.code.push(Instruction::FuncCall(name.clone(), args));
 
@@ -89,7 +108,8 @@ impl Program {
                     panic!("Already declared variable: {}", name);
                 }
                 let value = self.visit(node);
-                self.code.push(Instruction::VarAssign(self.vars.len(), value));
+                self.code
+                    .push(Instruction::VarAssign(self.vars.len(), value));
                 self.vars.push(name.clone());
                 Value::Void
             }
@@ -109,9 +129,7 @@ impl Program {
                     panic!("Undeclared variable: {}", name);
                 }
             }
-            &Node::Int(int) => {
-                Value::Int(int)
-            }
+            &Node::Int(int) => Value::Int(int),
             Node::BinOp(op, a, b) => {
                 let a = self.visit(a);
                 let b = self.visit(b);
@@ -124,21 +142,41 @@ impl Program {
 
                 Value::CmpOp(*op, Box::new(a), Box::new(b))
             }
-            Node::If { cond, then_branch } => {
+            Node::If {
+                cond,
+                then_branch,
+                else_branch,
+            } => {
                 let cond = self.visit(cond);
 
-                self.code.push(Instruction::JmpIfZero(cond, self.label_count));
+                self.backpatch_stack.push(self.code.len());
+                self.code.push(Instruction::JmpIfZero(cond, 0));
 
                 self.visit(then_branch);
-                self.add_label();
+                let i = self.backpatch_stack.pop().unwrap();
+                if else_branch.is_some() {
+                    self.backpatch_stack.push(self.code.len());
+                    self.code.push(Instruction::Jmp(0));
+                }
+                let label = self.add_label();
+                self.code[i].backpatch(label);
+
+                if let Some(else_branch) = else_branch {
+                    self.visit(else_branch);
+                    
+                    let i = self.backpatch_stack.pop().unwrap();
+                    let label = self.add_label();
+                    self.code[i].backpatch(label);
+                }
 
                 Value::Void
             }
         }
     }
 
-    fn add_label(&mut self) {
+    fn add_label(&mut self) -> usize {
         self.code.push(Instruction::Label(self.label_count));
         self.label_count += 1;
+        self.label_count - 1
     }
 }
