@@ -36,6 +36,10 @@ pub enum Node {
         else_branch: Option<Box<Node>>,
     },
     Nop,
+    While {
+        cond: Box<Node>,
+        body: Box<Node>,
+    },
 }
 
 // TODO: Provide details for parse error
@@ -163,6 +167,17 @@ impl<'a> Parser<'a> {
                     else_branch: Some(Box::new(then_branch)),
                 });
             }
+            TokenData::While => {
+                let cond = self.parse_expr()?;
+
+                self.expect(TokenData::LCurly)?;
+                let body = self.parse_block()?;
+
+                return Ok(Node::While {
+                    cond: Box::new(cond),
+                    body: Box::new(body),
+                });
+            }
             TokenData::RCurly => Err(ParseError::BlockEnding),
             _ => Err(Error(line!().to_string())),
         }?;
@@ -223,7 +238,7 @@ impl<'a> Parser<'a> {
         if self.nom() == Some(&tok) {
             Ok(())
         } else {
-            Err(Error(line!().to_string()))
+            Err(Error(format!("Expected {:?}", tok)))
         }
     }
 

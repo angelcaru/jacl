@@ -164,15 +164,34 @@ impl Program {
                 if let Some(else_branch) = else_branch {
                     self.visit(else_branch);
                     
-                    let i = self.backpatch_stack.pop().unwrap();
-                    let label = self.add_label();
-                    self.code[i].backpatch(label);
+                    self.backpatch();
                 }
+
+                Value::Void
+            }
+            Node::While { cond, body } => {
+                let start_label = self.add_label();
+
+                let cond = self.visit(cond);
+                self.backpatch_stack.push(self.code.len());
+                self.code.push(Instruction::JmpIfZero(cond, 0));
+
+                self.visit(body);
+
+                self.code.push(Instruction::Jmp(start_label));
+
+                self.backpatch();
 
                 Value::Void
             }
             Node::Nop => Value::Void,
         }
+    }
+
+    fn backpatch(&mut self) {
+        let i = self.backpatch_stack.pop().unwrap();
+        let label = self.add_label();
+        self.code[i].backpatch(label);
     }
 
     fn add_label(&mut self) -> usize {

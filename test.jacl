@@ -45,3 +45,9 @@ if > 1969 2024 {
 unless == 2025 2024 {
     print("The future is not now :(");
 }
+
+let i = 0;
+while < i 10 {
+    print_num(i);
+    i = + i 1;
+}
