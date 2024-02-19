@@ -42,7 +42,6 @@ pub enum Node {
     },
 }
 
-// TODO: Provide details for parse error
 #[derive(Debug)]
 pub enum ParseError {
     Error(Loc, String),
