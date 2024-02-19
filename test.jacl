@@ -41,3 +41,7 @@ if > 1969 2024 {
 } else {
     print("Of course.");
 }
+
+unless == 2025 2024 {
+    print("The future is not now :(");
+}

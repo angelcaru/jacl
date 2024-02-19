@@ -171,6 +171,7 @@ impl Program {
 
                 Value::Void
             }
+            Node::Nop => Value::Void,
         }
     }
 

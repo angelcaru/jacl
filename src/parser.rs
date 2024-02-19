@@ -35,6 +35,7 @@ pub enum Node {
         then_branch: Box<Node>,
         else_branch: Option<Box<Node>>,
     },
+    Nop,
 }
 
 // TODO: Provide details for parse error
@@ -146,6 +147,21 @@ impl<'a> Parser<'a> {
                         else_branch: None,
                     });
                 }
+            }
+            TokenData::Unless => {
+                let cond = self.parse_expr()?;
+
+                self.expect(TokenData::LCurly)?;
+                let then_branch = self.parse_block()?;
+                // NOTE: We don't need this because parse_block() already handles the '}'
+                //self.expect(TokenData::RCurly)?;
+
+                // We use return to avoid handling semicolon
+                return Ok(Node::If {
+                    cond: Box::new(cond),
+                    then_branch: Box::new(Node::Nop),
+                    else_branch: Some(Box::new(then_branch)),
+                });
             }
             TokenData::RCurly => Err(ParseError::BlockEnding),
             _ => Err(Error(line!().to_string())),

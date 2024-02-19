@@ -31,6 +31,7 @@ pub enum TokenData {
     LCurly,
     RCurly,
     Else,
+    Unless,
 }
 
 pub struct Lexer<'a, T: Iterator<Item = char>> {
@@ -52,6 +53,7 @@ fn keyword_or_name(name: &str) -> TokenData {
         "let" => TokenData::Let,
         "if" => TokenData::If,
         "else" => TokenData::Else,
+        "unless" => TokenData::Unless,
         name => TokenData::Name(name.into())
     }
 }
