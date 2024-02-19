@@ -4,7 +4,7 @@ mod lexer;
 mod loc;
 mod parser;
 
-use shell_quote::{Bash, QuoteRefExt};
+//use shell_quote::{Bash, QuoteRefExt};
 use std::{
     env::{self, set_current_dir},
     fs::{read_dir, File},
@@ -27,12 +27,16 @@ fn read_file(name: &String) -> std::io::Result<String> {
     Ok(txt)
 }
 
-#[allow(suspicious_double_ref_op)] // That's what I wanted to do, idiot compiler!
 fn run_cmd(cmd: &[String]) -> std::io::Result<ExitStatus> {
     print!("[CMD] ");
     for arg in cmd {
         let arg = arg.clone();
-        let quoted: String = arg.quoted(Bash);
+        //let quoted: String = arg.quoted(Bash);
+        let quoted = if arg.contains(' ') {
+            format!("\"{arg}\"")
+        } else {
+            arg
+        };
         print!("{} ", quoted);
     }
     print!("\n");
