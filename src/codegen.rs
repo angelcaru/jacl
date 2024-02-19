@@ -167,11 +167,11 @@ pub mod x86_64 {
                 f.write_all(b"    mov rax, 0\n")?;
                 f.write_all(b"    mov rbx, 1\n")?;
                 f.write_all(match op {
-                    CmpOp::Less    => b"    cmovb rax, rbx\n",
-                    CmpOp::Equal   => b"    cmove rax, rbx\n",
+                    CmpOp::Less => b"    cmovb rax, rbx\n",
+                    CmpOp::Equal => b"    cmove rax, rbx\n",
                     CmpOp::Greater => b"    cmova rax, rbx\n",
-                    CmpOp::LtEq    => b"    cmovbe rax, rbx\n",
-                    CmpOp::GtEq    => b"    cmovae rax, rbx\n",
+                    CmpOp::LtEq => b"    cmovbe rax, rbx\n",
+                    CmpOp::GtEq => b"    cmovae rax, rbx\n",
                 })?;
 
                 f.write_all(format!("    mov {}, rax\n", reg).as_bytes())?;

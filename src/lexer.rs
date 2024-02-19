@@ -56,14 +56,14 @@ fn keyword_or_name(name: &str) -> TokenData {
         "else" => TokenData::Else,
         "unless" => TokenData::Unless,
         "while" => TokenData::While,
-        name => TokenData::Name(name.into())
+        name => TokenData::Name(name.into()),
     }
 }
 
 impl<T: Iterator<Item = char>> Iterator for Lexer<T> {
-    type Item = Token;
-    fn next(&mut self) -> Option<Token> {
-        Some(Token {
+    type Item = Result<Token, (Loc, String)>;
+    fn next(&mut self) -> Option<Result<Token, (Loc, String)>> {
+        Some(Ok(Token {
             loc: self.loc.clone(),
             data: match self.loc.advance(self.code.next()?) {
                 '(' => TokenData::LParen,
@@ -101,11 +101,11 @@ impl<T: Iterator<Item = char>> Iterator for Lexer<T> {
                 '/' => {
                     if let Some('/') = self.code.peek() {
                         while self.loc.advance(self.code.next()?) != '\n' {}
-                        self.next()?.data
+                        return self.next();
                     } else {
                         TokenData::Div
                     }
-                },
+                }
                 ch if ch.is_alphabetic() || ch == '_' => {
                     let mut name = String::new();
 
@@ -151,10 +151,15 @@ impl<T: Iterator<Item = char>> Iterator for Lexer<T> {
 
                     TokenData::Int(number.parse().unwrap())
                 }
-                ch if ch.is_whitespace() => self.next()?.data, // ignore
+                ch if ch.is_whitespace() => return self.next(), // ignore
 
-                ch => panic!("Invalid char: {ch}"),
+                ch => {
+                    return Some(Err((
+                        self.loc.clone(),
+                        format!("Invalid char: {ch}").into(),
+                    )))
+                }
             },
-        })
+        }))
     }
 }

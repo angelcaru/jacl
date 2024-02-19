@@ -36,7 +36,7 @@ impl Instruction {
             Self::Jmp(i) => {
                 *i = label_id;
             }
-            _ => panic!("backpatch() called on non-jump instruction: {:?}", self)
+            _ => panic!("backpatch() called on non-jump instruction: {:?}", self),
         }
     }
 }
@@ -71,7 +71,7 @@ impl Program {
             code,
             vars,
             label_count: 0,
-            backpatch_stack: Vec::new()
+            backpatch_stack: Vec::new(),
         };
 
         prog.visit(node);
@@ -163,7 +163,7 @@ impl Program {
 
                 if let Some(else_branch) = else_branch {
                     self.visit(else_branch);
-                    
+
                     self.backpatch();
                 }
 

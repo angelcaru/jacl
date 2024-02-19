@@ -1,4 +1,7 @@
-use crate::{lexer::{Token, TokenData}, loc::Loc};
+use crate::{
+    lexer::{Token, TokenData},
+    loc::Loc,
+};
 
 pub type NodeList = Vec<Node>;
 
@@ -45,14 +48,22 @@ pub enum Node {
 #[derive(Debug)]
 pub enum ParseError {
     Error(Loc, String),
+    LexerError(Loc, String),
     BlockEnding,
 }
 
 type ParseResult<T> = Result<T, ParseError>;
 
-pub fn parse<T: Iterator<Item = Token>>(lexer: T) -> ParseResult<Node> {
+pub fn parse<T: Iterator<Item = Result<Token, (Loc, String)>>>(lexer: T) -> ParseResult<Node> {
+    let mut tokens = Vec::new();
+    for res in lexer {
+        match res {
+            Ok(tok) => tokens.push(tok),
+            Err((loc, err)) => Err(ParseError::LexerError(loc, err))?,
+        }
+    }
     Parser {
-        lexer: lexer.collect(),
+        lexer: tokens,
         i: 0,
     }
     .parse_block()
@@ -243,6 +254,10 @@ impl Parser {
     }
 
     fn loc(&self) -> Loc {
-        self.lexer.get(self.i.checked_sub(1).unwrap_or(0)).unwrap().loc.clone()
+        self.lexer
+            .get(self.i.checked_sub(1).unwrap_or(0))
+            .unwrap()
+            .loc
+            .clone()
     }
 }

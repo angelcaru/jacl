@@ -53,14 +53,19 @@ fn main() -> std::io::Result<()> {
     let code = read_file(&filename)?;
 
     let lexer = Lexer::from_iter(&filename, code.chars());
-    let ast = parse(lexer).inspect_err(|err| {
-        if let ParseError::Error(loc, err) = err {
-            eprintln!("{}: {}", loc, err);
-            exit(1);
-        } else {
-            panic!("unreachable");
-        }
-    }).unwrap();
+    let ast = parse(lexer)
+        .inspect_err(|err| match err {
+            ParseError::Error(loc, err) => {
+                eprintln!("{}: {}", loc, err);
+                exit(1);
+            }
+            ParseError::LexerError(loc, err) => {
+                eprintln!("{}: {}", loc, err);
+                exit(1);
+            }
+            _ => panic!("unreachable"),
+        })
+        .unwrap();
     println!("{ast:?}");
     let prog = Program::from_ast(&ast);
 
@@ -89,14 +94,14 @@ fn main() -> std::io::Result<()> {
             args.push(file_name.to_string());
         }
     }
-    
+
     args.extend(["-o".into(), "test".into()]);
     let code = run_cmd(&args[..])?;
     if !code.success() {
         eprintln!("[ERROR] ld exited with code {}", code.into_raw());
         exit(1);
     }
-    
+
     println!("[INFO] Success! Finished binary is at asm/test");
 
     Ok(())
