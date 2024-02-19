@@ -23,7 +23,7 @@ print_num(2);
 print("");
 print("---------------------------------");
 print("");
-`
+
 print_num(< 20 10);
 print_num(< 10 20);
 
