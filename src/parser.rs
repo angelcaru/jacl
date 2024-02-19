@@ -1,4 +1,4 @@
-use crate::lexer::{Token, TokenData};
+use crate::{lexer::{Token, TokenData}, loc::Loc};
 
 pub type NodeList = Vec<Node>;
 
@@ -45,13 +45,13 @@ pub enum Node {
 // TODO: Provide details for parse error
 #[derive(Debug)]
 pub enum ParseError {
-    Error(String),
+    Error(Loc, String),
     BlockEnding,
 }
 
 type ParseResult<T> = Result<T, ParseError>;
 
-pub fn parse<'a, T: Iterator<Item = Token<'a>>>(lexer: T) -> ParseResult<Node> {
+pub fn parse<T: Iterator<Item = Token>>(lexer: T) -> ParseResult<Node> {
     Parser {
         lexer: lexer.collect(),
         i: 0,
@@ -59,8 +59,8 @@ pub fn parse<'a, T: Iterator<Item = Token<'a>>>(lexer: T) -> ParseResult<Node> {
     .parse_block()
 }
 
-struct Parser<'a> {
-    lexer: Vec<Token<'a>>,
+struct Parser {
+    lexer: Vec<Token>,
     i: usize,
 }
 
@@ -76,7 +76,7 @@ macro_rules! expect_pattern {
 */
 
 use ParseError::Error;
-impl<'a> Parser<'a> {
+impl Parser {
     fn parse_block(&mut self) -> ParseResult<Node> {
         println!("{:#?}", self.lexer);
         let mut statements = Vec::new();
@@ -97,7 +97,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_statement(&mut self) -> ParseResult<Node> {
-        let res = match self.nom().ok_or(Error(line!().to_string()))? {
+        let loc = self.loc();
+        let res = match self.nom().expect("On EOF we shouldn't be here") {
             TokenData::Name(name) => {
                 let name = name.clone();
 
@@ -111,7 +112,7 @@ impl<'a> Parser<'a> {
                         let value = self.parse_expr()?;
                         Ok(Node::VarAssign(name, Box::new(value)))
                     }
-                    _ => Err(Error("Expected '('".into())),
+                    _ => Err(Error(self.loc(), "Expected '('".into())),
                 }
             }
             TokenData::Let => {
@@ -121,7 +122,7 @@ impl<'a> Parser<'a> {
 
                     Ok(Node::VarDecl(name, Box::new(self.parse_expr()?)))
                 } else {
-                    Err(Error(line!().to_string()))
+                    Err(Error(self.loc(), "Expected identifier".into()))
                 }
             }
             TokenData::If => {
@@ -179,14 +180,15 @@ impl<'a> Parser<'a> {
                 });
             }
             TokenData::RCurly => Err(ParseError::BlockEnding),
-            _ => Err(Error(line!().to_string())),
+            _ => Err(Error(self.loc(), "Expected statement".into())),
         }?;
         self.expect(TokenData::Semicolon)?;
         Ok(res)
     }
 
     fn parse_expr(&mut self) -> ParseResult<Node> {
-        match self.nom().ok_or(Error("Expected expression".into()))? {
+        let loc = self.loc();
+        match self.nom().ok_or(Error(loc, "Expected expression".into()))? {
             TokenData::StrLit(string) => Ok(Node::StrLit(string.clone())),
             TokenData::Name(name) => Ok(Node::VarAccess(name.clone())),
             TokenData::Int(int) => Ok(Node::Int(*int)),
@@ -202,7 +204,7 @@ impl<'a> Parser<'a> {
             TokenData::LtEq => self.parse_cmp_op(CmpOp::LtEq),
             TokenData::GtEq => self.parse_cmp_op(CmpOp::GtEq),
 
-            _ => Err(Error("Expected expression".into())),
+            _ => Err(Error(self.loc(), "Expected expression".into())),
         }
     }
 
@@ -220,16 +222,6 @@ impl<'a> Parser<'a> {
         Ok(Node::CmpOp(op, Box::new(a), Box::new(b)))
     }
 
-    /*
-    fn expect_fn<T>(&mut self, f: T) -> ParseResult<()>
-        where T: FnOnce(&TokenData) -> bool {
-        if f(self.nom().ok_or(ParseError(line!().to_string()))?) {
-            Ok(())
-        } else {
-            Err(ParseError(line!().to_string()))
-        }
-    }*/
-
     fn is_empty(&self) -> bool {
         self.i >= self.lexer.len()
     }
@@ -238,7 +230,7 @@ impl<'a> Parser<'a> {
         if self.nom() == Some(&tok) {
             Ok(())
         } else {
-            Err(Error(format!("Expected {:?}", tok)))
+            Err(Error(self.loc(), format!("Expected {:?}", tok)))
         }
     }
 
@@ -250,5 +242,9 @@ impl<'a> Parser<'a> {
         let tok = self.lexer.get(self.i)?;
         self.i += 1;
         Some(&tok.data)
+    }
+
+    fn loc(&self) -> Loc {
+        self.lexer.get(self.i.checked_sub(1).unwrap_or(0)).unwrap().loc.clone()
     }
 }

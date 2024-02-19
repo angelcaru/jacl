@@ -3,8 +3,8 @@ use std::iter::Peekable;
 use crate::loc::Loc;
 
 #[derive(Debug, PartialEq)]
-pub struct Token<'a> {
-    pub loc: Loc<'a>,
+pub struct Token {
+    pub loc: Loc,
     pub data: TokenData,
 }
 
@@ -35,13 +35,13 @@ pub enum TokenData {
     While,
 }
 
-pub struct Lexer<'a, T: Iterator<Item = char>> {
-    loc: Loc<'a>,
+pub struct Lexer<T: Iterator<Item = char>> {
+    loc: Loc,
     code: Peekable<T>,
 }
 
-impl<'a, T: Iterator<Item = char>> Lexer<'a, T> {
-    pub fn from_iter(path: &'a String, iter: T) -> Self {
+impl<'a, T: Iterator<Item = char>> Lexer<T> {
+    pub fn from_iter(path: &String, iter: T) -> Self {
         Self {
             loc: Loc::new(path),
             code: iter.peekable(),
@@ -60,11 +60,11 @@ fn keyword_or_name(name: &str) -> TokenData {
     }
 }
 
-impl<'a, T: Iterator<Item = char>> Iterator for Lexer<'a, T> {
-    type Item = Token<'a>;
-    fn next(&mut self) -> Option<Token<'a>> {
+impl<T: Iterator<Item = char>> Iterator for Lexer<T> {
+    type Item = Token;
+    fn next(&mut self) -> Option<Token> {
         Some(Token {
-            loc: self.loc,
+            loc: self.loc.clone(),
             data: match self.loc.advance(self.code.next()?) {
                 '(' => TokenData::LParen,
                 ')' => TokenData::RParen,

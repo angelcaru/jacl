@@ -18,6 +18,8 @@ use ir::Program;
 use lexer::Lexer;
 use parser::parse;
 
+use crate::parser::ParseError;
+
 fn read_file(name: &String) -> std::io::Result<String> {
     let mut txt = String::new();
     let mut file = File::open(name)?;
@@ -51,7 +53,14 @@ fn main() -> std::io::Result<()> {
     let code = read_file(&filename)?;
 
     let lexer = Lexer::from_iter(&filename, code.chars());
-    let ast = parse(lexer).unwrap();
+    let ast = parse(lexer).inspect_err(|err| {
+        if let ParseError::Error(loc, err) = err {
+            eprintln!("{}: {}", loc, err);
+            exit(1);
+        } else {
+            panic!("unreachable");
+        }
+    }).unwrap();
     println!("{ast:?}");
     let prog = Program::from_ast(&ast);
 

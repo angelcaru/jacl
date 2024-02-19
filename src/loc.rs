@@ -1,29 +1,29 @@
 use std::fmt::{Debug, Display, Formatter};
 
-#[derive(Clone, Copy, PartialEq)]
-pub struct Loc<'a> {
-    path: &'a String,
+#[derive(Clone, PartialEq)]
+pub struct Loc {
+    path: Box<String>,
     line: usize,
     col: usize,
     char: usize,
 }
 
-impl Debug for Loc<'_> {
+impl Debug for Loc {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(fmt, "{self}")
     }
 }
 
-impl Display for Loc<'_> {
+impl Display for Loc {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(fmt, "{}:{}:{}", self.path, self.line, self.col)
     }
 }
 
-impl<'a> Loc<'a> {
-    pub fn new(path: &'a String) -> Self {
+impl Loc {
+    pub fn new(path: &String) -> Self {
         Self {
-            path,
+            path: Box::new(path.clone()),
             line: 1,
             col: 1,
             char: 0,
