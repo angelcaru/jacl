@@ -6,7 +6,7 @@ mod parser;
 
 //use shell_quote::{Bash, QuoteRefExt};
 use std::{
-    env,
+    env::{self, Args},
     fs::{read_dir, DirEntry, File},
     io::{Error, Read},
     os::unix::process::ExitStatusExt,
@@ -126,12 +126,26 @@ fn compile_prog(prog: Program, binary_path: &String) -> Result<(), std::io::Erro
     })
 }
 
+fn get_binary_path(args: &mut std::iter::Peekable<Args>) -> String {
+    match args.peek() {
+        Some(s) if s == "-o" || s == "--out" => {
+            args.next();
+            args.next().expect("Please provide an output path")
+        }
+        _ => "a.out".into(), // The classic
+    }
+}
+
 fn main() -> std::io::Result<()> {
     let mut args = env::args().peekable();
     let _program = args.next().expect("Program name");
+    
     let debug = parse_debug_flag(&mut args);
+
     let filename = args.next().expect("Please provide a program");
     let code = read_file(&filename)?;
+
+    let binary_path = get_binary_path(&mut args);
 
     let lexer = Lexer::from_iter(&filename, code.chars());
 
@@ -146,8 +160,7 @@ fn main() -> std::io::Result<()> {
         prog.disassemble();
     }
 
-    let binary_path = &"./test".into();
-    compile_prog(prog, binary_path)?;
+    compile_prog(prog, &binary_path)?;
 
     println!("[INFO] Success! Finished binary is at {binary_path}");
 
