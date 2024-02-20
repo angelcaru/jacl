@@ -122,7 +122,11 @@ impl Parser {
 
                 match self.nom() {
                     Some(TokenData::LParen) => {
-                        let args = vec![self.parse_expr()?];
+                        let mut args = vec![self.parse_expr()?];
+                        while let Some(TokenData::Comma) = self.peek() {
+                            self.nom();
+                            args.push(self.parse_expr()?);
+                        }
                         self.expect(TokenData::RParen)?;
                         Ok(Node::FuncCall(loc, name, args))
                     }

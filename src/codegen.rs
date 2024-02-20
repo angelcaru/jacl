@@ -22,6 +22,7 @@ pub mod x86_64 {
             f.write_all(b"section '.text' executable\n")?;
             f.write_all(b"extrn print\n")?; // TODO: unhardcode functions
             f.write_all(b"extrn print_num\n")?;
+            f.write_all(b"extrn foo\n")?;
             f.write_all(b"public _start\n")?;
             f.write_all(b"_start:\n")?;
             f.write_all(b"    push rbp\n")?;
@@ -52,14 +53,25 @@ pub mod x86_64 {
             Ok(())
         }
     }
+
+    const CALL_CONVENTION: [Register; 6] = [
+        Register::Rdi,
+        Register::Rsi,
+        Register::Rdx,
+        Register::Rcx,
+        Register::R8,
+        Register::R9
+    ];
+
     fn compile_inst_to_asm(f: &mut File, inst: &Instruction) -> std::io::Result<()> {
         use Instruction::*;
         match inst {
             FuncCall(name, args) => {
-                assert_eq!(args.len(), 1); // Parser doesn't support it, why should we?
-                let arg = &args[0];
+                // TODO: add support for more than six args
 
-                move_value_into_register(f, arg, Register::Rdi)?;
+                for (arg, reg) in args.iter().zip(CALL_CONVENTION) {
+                    move_value_into_register(f, arg, reg)?;
+                }
 
                 f.write_all(format!("    call {name}\n").as_bytes())?;
             }
