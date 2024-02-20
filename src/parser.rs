@@ -56,13 +56,19 @@ pub enum ParseError {
 
 type ParseResult<T> = Result<T, ParseError>;
 
-pub fn parse<T: Iterator<Item = Result<Token, (Loc, String)>>>(lexer: T) -> ParseResult<Node> {
+pub fn parse<T: Iterator<Item = Result<Token, (Loc, String)>>>(
+    lexer: T,
+    debug: bool,
+) -> ParseResult<Node> {
     let mut tokens = Vec::new();
     for res in lexer {
         match res {
             Ok(tok) => tokens.push(tok),
             Err((loc, err)) => Err(ParseError::LexerError(loc, err))?,
         }
+    }
+    if debug {
+        println!("{:#?}", tokens);
     }
     Parser {
         lexer: tokens,
@@ -90,7 +96,6 @@ macro_rules! expect_pattern {
 use ParseError::Error;
 impl Parser {
     fn parse_block(&mut self) -> ParseResult<Node> {
-        println!("{:#?}", self.lexer);
         let loc = self.loc();
         let mut statements = Vec::new();
 
@@ -205,7 +210,10 @@ impl Parser {
 
     fn parse_expr(&mut self) -> ParseResult<Node> {
         let loc = self.loc();
-        match self.nom().ok_or(Error(loc.clone(), "Expected expression".into()))? {
+        match self
+            .nom()
+            .ok_or(Error(loc.clone(), "Expected expression".into()))?
+        {
             TokenData::StrLit(string) => Ok(Node::StrLit(loc, string.clone())),
             TokenData::Name(name) => Ok(Node::VarAccess(loc, name.clone())),
             TokenData::Int(int) => Ok(Node::Int(loc, *int)),

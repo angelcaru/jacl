@@ -50,14 +50,21 @@ fn run_cmd(cmd: &[String]) -> std::io::Result<ExitStatus> {
 }
 
 fn main() -> std::io::Result<()> {
-    let mut args = env::args();
+    let mut args = env::args().peekable();
     let _program = args.next().expect("Program name");
-
+    let debug = match args.peek() {
+        Some(s) if s == "--debug" => {
+            args.next();
+            true
+        }
+        _ => false,
+    };
     let filename = args.next().expect("Please provide a program");
     let code = read_file(&filename)?;
 
     let lexer = Lexer::from_iter(&filename, code.chars());
-    let ast = parse(lexer)
+
+    let ast = parse(lexer, debug)
         .inspect_err(|err| match err {
             ParseError::Error(loc, err) => {
                 eprintln!("{}: {}", loc, err);
@@ -70,7 +77,10 @@ fn main() -> std::io::Result<()> {
             _ => panic!("unreachable"),
         })
         .unwrap();
-    println!("{ast:?}");
+    if debug {
+        println!("{ast:#?}");
+    }
+
     let prog = Program::from_ast(&ast)
         .inspect_err(|err| {
             eprintln!("{}", err);
@@ -78,7 +88,9 @@ fn main() -> std::io::Result<()> {
         })
         .unwrap();
 
-    prog.disassemble();
+    if debug {
+        prog.disassemble();
+    }
 
     set_current_dir("./asm")?;
     prog.compile_to_asm("out.asm")?;

@@ -119,7 +119,10 @@ impl Program {
             }
             Node::VarDecl(loc, name, node) => {
                 if self.vars.contains(name) {
-                    return Err(IRError(loc.clone(), format!("Already declared variable: {}", name)));
+                    return Err(IRError(
+                        loc.clone(),
+                        format!("Already declared variable: {}", name),
+                    ));
                 }
                 let value = self.visit(node)?;
                 self.code
@@ -131,7 +134,10 @@ impl Program {
                 if let Some(idx) = self.vars.iter().position(|x| x == name) {
                     Value::FromVar(idx)
                 } else {
-                    return Err(IRError(loc.clone(), format!("Undeclared variable: {}", name)));
+                    return Err(IRError(
+                        loc.clone(),
+                        format!("Undeclared variable: {}", name),
+                    ));
                 }
             }
             Node::VarAssign(loc, name, node) => {
@@ -140,7 +146,10 @@ impl Program {
                     self.code.push(Instruction::VarAssign(idx, value));
                     Value::Void
                 } else {
-                    return Err(IRError(loc.clone(), format!("Undeclared variable: {}", name)));
+                    return Err(IRError(
+                        loc.clone(),
+                        format!("Undeclared variable: {}", name),
+                    ));
                 }
             }
             &Node::Int(_, int) => Value::Int(int),
