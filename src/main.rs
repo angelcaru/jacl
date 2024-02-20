@@ -6,9 +6,9 @@ mod parser;
 
 //use shell_quote::{Bash, QuoteRefExt};
 use std::{
-    env::{self, set_current_dir},
-    fs::{read_dir, File},
-    io::Read,
+    env,
+    fs::{read_dir, DirEntry, File},
+    io::{Error, Read},
     os::unix::process::ExitStatusExt,
     process::{exit, Command, ExitStatus},
 };
@@ -49,22 +49,18 @@ fn run_cmd(cmd: &[String]) -> std::io::Result<ExitStatus> {
     process.wait()
 }
 
-fn main() -> std::io::Result<()> {
-    let mut args = env::args().peekable();
-    let _program = args.next().expect("Program name");
-    let debug = match args.peek() {
+fn parse_debug_flag(args: &mut std::iter::Peekable<env::Args>) -> bool {
+    match args.peek() {
         Some(s) if s == "--debug" => {
             args.next();
             true
         }
         _ => false,
-    };
-    let filename = args.next().expect("Please provide a program");
-    let code = read_file(&filename)?;
+    }
+}
 
-    let lexer = Lexer::from_iter(&filename, code.chars());
-
-    let ast = parse(lexer, debug)
+fn parse_and_report_err(lexer: Lexer<std::str::Chars<'_>>, debug: bool) -> parser::Node {
+    parse(lexer, debug)
         .inspect_err(|err| match err {
             ParseError::Error(loc, err) => {
                 eprintln!("{}: {}", loc, err);
@@ -76,28 +72,30 @@ fn main() -> std::io::Result<()> {
             }
             _ => panic!("unreachable"),
         })
-        .unwrap();
-    if debug {
-        println!("{ast:#?}");
-    }
+        .unwrap()
+}
 
-    let prog = Program::from_ast(&ast)
+fn generate_ir_and_report_err(ast: parser::Node) -> Program {
+    Program::from_ast(&ast)
         .inspect_err(|err| {
             eprintln!("{}", err);
             exit(1);
         })
-        .unwrap();
+        .unwrap()
+}
 
-    if debug {
-        prog.disassemble();
-    }
+fn add_prefix(prefix: &'static str) -> impl FnMut(String) -> String {
+    move |x| format!("{prefix}{x}")
+}
 
-    set_current_dir("./asm")?;
+fn remove_bs(bs: Result<DirEntry, Error>) -> String {
+    bs.unwrap().file_name().into_string().unwrap()
+}
+
+fn compile_prog(prog: Program, binary_path: &String) -> Result<(), std::io::Error> {
+    //set_current_dir("./asm")?;
     prog.compile_to_asm("out.asm")?;
-
-    for file in read_dir(".")? {
-        let file_name = file?.file_name();
-        let file_name = file_name.to_str().unwrap();
+    for file_name in read_dir("std/")?.map(remove_bs).map(add_prefix("std/")) {
         if file_name.ends_with(".asm") {
             let code = run_cmd(&["fasm".into(), file_name.into()])?;
             if !code.success() {
@@ -106,24 +104,52 @@ fn main() -> std::io::Result<()> {
             }
         }
     }
-
-    let mut args = vec!["ld".into()];
-    for file in read_dir(".")? {
-        let file_name = file?.file_name();
-        let file_name = file_name.to_str().unwrap();
-        if file_name.ends_with(".o") {
-            args.push(file_name.to_string());
-        }
-    }
-
-    args.extend(["-o".into(), "test".into()]);
-    let code = run_cmd(&args[..])?;
+    let code = run_cmd(&["fasm".into(), "out.asm".into()])?;
     if !code.success() {
-        eprintln!("[ERROR] ld exited with code {}", code.into_raw());
+        eprintln!("[ERROR] fasm exited with code {}", code.into_raw());
         exit(1);
     }
 
-    println!("[INFO] Success! Finished binary is at asm/test");
+    let mut args = vec!["ld".into(), "out.o".into()];
+    args.extend(
+        read_dir("std/")?
+            .map(remove_bs)
+            .map(add_prefix("std/"))
+            .filter(|x| x.ends_with(".o"))
+            .collect::<Vec<_>>(),
+    );
+    args.extend(["-o".into(), binary_path.clone()]);
+    let code = run_cmd(&args[..])?;
+    Ok(if !code.success() {
+        eprintln!("[ERROR] ld exited with code {}", code.into_raw());
+        exit(1);
+    })
+}
+
+fn main() -> std::io::Result<()> {
+    let mut args = env::args().peekable();
+    let _program = args.next().expect("Program name");
+    let debug = parse_debug_flag(&mut args);
+    let filename = args.next().expect("Please provide a program");
+    let code = read_file(&filename)?;
+
+    let lexer = Lexer::from_iter(&filename, code.chars());
+
+    let ast = parse_and_report_err(lexer, debug);
+    if debug {
+        println!("{ast:#?}");
+    }
+
+    let prog = generate_ir_and_report_err(ast);
+
+    if debug {
+        prog.disassemble();
+    }
+
+    let binary_path = &"./test".into();
+    compile_prog(prog, binary_path)?;
+
+    println!("[INFO] Success! Finished binary is at {binary_path}");
 
     Ok(())
 }
