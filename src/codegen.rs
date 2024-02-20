@@ -60,7 +60,7 @@ pub mod x86_64 {
         Register::Rdx,
         Register::Rcx,
         Register::R8,
-        Register::R9
+        Register::R9,
     ];
 
     fn compile_inst_to_asm(f: &mut File, inst: &Instruction) -> std::io::Result<()> {
