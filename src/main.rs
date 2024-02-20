@@ -71,7 +71,12 @@ fn main() -> std::io::Result<()> {
         })
         .unwrap();
     println!("{ast:?}");
-    let prog = Program::from_ast(&ast);
+    let prog = Program::from_ast(&ast)
+        .inspect_err(|err| {
+            eprintln!("{}", err);
+            exit(1);
+        })
+        .unwrap();
 
     prog.disassemble();
 

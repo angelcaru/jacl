@@ -24,22 +24,24 @@ pub enum CmpOp {
 
 #[derive(Debug)]
 pub enum Node {
-    FuncCall(String, NodeList),
-    StrLit(String),
-    Block(NodeList),
-    VarDecl(String, Box<Node>),
-    VarAccess(String),
-    VarAssign(String, Box<Node>),
-    Int(usize),
-    BinOp(BinOp, Box<Node>, Box<Node>),
-    CmpOp(CmpOp, Box<Node>, Box<Node>),
+    FuncCall(Loc, String, NodeList),
+    StrLit(Loc, String),
+    Block(Loc, NodeList),
+    VarDecl(Loc, String, Box<Node>),
+    VarAccess(Loc, String),
+    VarAssign(Loc, String, Box<Node>),
+    Int(Loc, usize),
+    BinOp(Loc, BinOp, Box<Node>, Box<Node>),
+    CmpOp(Loc, CmpOp, Box<Node>, Box<Node>),
     If {
+        loc: Loc,
         cond: Box<Node>,
         then_branch: Box<Node>,
         else_branch: Option<Box<Node>>,
     },
-    Nop,
+    Nop(Loc),
     While {
+        loc: Loc,
         cond: Box<Node>,
         body: Box<Node>,
     },
@@ -89,6 +91,7 @@ use ParseError::Error;
 impl Parser {
     fn parse_block(&mut self) -> ParseResult<Node> {
         println!("{:#?}", self.lexer);
+        let loc = self.loc();
         let mut statements = Vec::new();
 
         // let st = self.parse_statement()?;
@@ -103,10 +106,11 @@ impl Parser {
             statements.push(st);
         }
 
-        Ok(Node::Block(statements))
+        Ok(Node::Block(loc, statements))
     }
 
     fn parse_statement(&mut self) -> ParseResult<Node> {
+        let loc = self.loc();
         let res = match self.nom().expect("On EOF we shouldn't be here") {
             TokenData::Name(name) => {
                 let name = name.clone();
@@ -115,13 +119,13 @@ impl Parser {
                     Some(TokenData::LParen) => {
                         let args = vec![self.parse_expr()?];
                         self.expect(TokenData::RParen)?;
-                        Ok(Node::FuncCall(name, args))
+                        Ok(Node::FuncCall(loc, name, args))
                     }
                     Some(TokenData::Equals) => {
                         let value = self.parse_expr()?;
-                        Ok(Node::VarAssign(name, Box::new(value)))
+                        Ok(Node::VarAssign(loc, name, Box::new(value)))
                     }
-                    _ => Err(Error(self.loc(), "Expected '('".into())),
+                    _ => Err(Error(loc, "Expected '('".into())),
                 }
             }
             TokenData::Let => {
@@ -129,9 +133,9 @@ impl Parser {
                     let name = name.clone();
                     self.expect(TokenData::Equals)?;
 
-                    Ok(Node::VarDecl(name, Box::new(self.parse_expr()?)))
+                    Ok(Node::VarDecl(loc, name, Box::new(self.parse_expr()?)))
                 } else {
-                    Err(Error(self.loc(), "Expected identifier".into()))
+                    Err(Error(loc, "Expected identifier".into()))
                 }
             }
             TokenData::If => {
@@ -149,6 +153,7 @@ impl Parser {
                     let else_branch = self.parse_block()?;
 
                     return Ok(Node::If {
+                        loc,
                         cond: Box::new(cond),
                         then_branch: Box::new(then_branch),
                         else_branch: Some(Box::new(else_branch)),
@@ -156,6 +161,7 @@ impl Parser {
                 } else {
                     // We use return to avoid handling semicolon
                     return Ok(Node::If {
+                        loc,
                         cond: Box::new(cond),
                         then_branch: Box::new(then_branch),
                         else_branch: None,
@@ -172,8 +178,9 @@ impl Parser {
 
                 // We use return to avoid handling semicolon
                 return Ok(Node::If {
+                    loc: loc.clone(),
                     cond: Box::new(cond),
-                    then_branch: Box::new(Node::Nop),
+                    then_branch: Box::new(Node::Nop(loc)),
                     else_branch: Some(Box::new(then_branch)),
                 });
             }
@@ -184,12 +191,13 @@ impl Parser {
                 let body = self.parse_block()?;
 
                 return Ok(Node::While {
+                    loc,
                     cond: Box::new(cond),
                     body: Box::new(body),
                 });
             }
             TokenData::RCurly => Err(ParseError::BlockEnding),
-            _ => Err(Error(self.loc(), "Expected statement".into())),
+            _ => Err(Error(loc, "Expected statement".into())),
         }?;
         self.expect(TokenData::Semicolon)?;
         Ok(res)
@@ -197,10 +205,10 @@ impl Parser {
 
     fn parse_expr(&mut self) -> ParseResult<Node> {
         let loc = self.loc();
-        match self.nom().ok_or(Error(loc, "Expected expression".into()))? {
-            TokenData::StrLit(string) => Ok(Node::StrLit(string.clone())),
-            TokenData::Name(name) => Ok(Node::VarAccess(name.clone())),
-            TokenData::Int(int) => Ok(Node::Int(*int)),
+        match self.nom().ok_or(Error(loc.clone(), "Expected expression".into()))? {
+            TokenData::StrLit(string) => Ok(Node::StrLit(loc, string.clone())),
+            TokenData::Name(name) => Ok(Node::VarAccess(loc, name.clone())),
+            TokenData::Int(int) => Ok(Node::Int(loc, *int)),
 
             TokenData::Plus => self.parse_bin_op(BinOp::Plus),
             TokenData::Minus => self.parse_bin_op(BinOp::Minus),
@@ -213,22 +221,24 @@ impl Parser {
             TokenData::LtEq => self.parse_cmp_op(CmpOp::LtEq),
             TokenData::GtEq => self.parse_cmp_op(CmpOp::GtEq),
 
-            _ => Err(Error(self.loc(), "Expected expression".into())),
+            _ => Err(Error(loc, "Expected expression".into())),
         }
     }
 
     fn parse_bin_op(&mut self, op: BinOp) -> ParseResult<Node> {
+        let loc = self.loc();
         let a = self.parse_expr()?;
         let b = self.parse_expr()?;
 
-        Ok(Node::BinOp(op, Box::new(a), Box::new(b)))
+        Ok(Node::BinOp(loc, op, Box::new(a), Box::new(b)))
     }
 
     fn parse_cmp_op(&mut self, op: CmpOp) -> ParseResult<Node> {
+        let loc = self.loc();
         let a = self.parse_expr()?;
         let b = self.parse_expr()?;
 
-        Ok(Node::CmpOp(op, Box::new(a), Box::new(b)))
+        Ok(Node::CmpOp(loc, op, Box::new(a), Box::new(b)))
     }
 
     fn is_empty(&self) -> bool {
