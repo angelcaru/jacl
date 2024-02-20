@@ -1,0 +1,5 @@
+print("Enter a word:");
+let buf = "************"; // This is a very good way of allocating memory
+read(0, buf);
+print("Here is your word (if it had <=12 characters):");
+print(buf);

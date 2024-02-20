@@ -1,0 +1,8 @@
+let msg = "Hello"; // This is a comment
+print(msg);
+msg = "World!";
+print(msg);
+
+let test_num = 69;
+print_num(test_num);
+print_num(420);

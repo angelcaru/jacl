@@ -1,0 +1,15 @@
+if > 2024 1969 {
+    print("Yeah!");
+} else {
+    print("Idiot.");
+}
+
+if > 1969 2024 {
+    print("No!");
+} else {
+    print("Of course.");
+}
+
+unless == 2025 2024 {
+    print("The future is not now :(");
+}

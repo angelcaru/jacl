@@ -1,7 +1,10 @@
 # Just Another Compiled Language
 ### Quick Start
-Make sure you have `fasm` and `cargo` installed.
+1. Install `fasm` and `cargo` if you haven't already.
+2. See below
 ```console
-$ cargo run -- test.jacl
-$ ./test
+$ cargo run -- 01-hello.jacl
+$ ./01-hello
+Hello, World!
+Goodbye, World!
 ```

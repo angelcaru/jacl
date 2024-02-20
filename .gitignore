@@ -1,4 +1,4 @@
 /target
-/*/*.o
+*.o
 /out.asm
-/out.o
+/*-*

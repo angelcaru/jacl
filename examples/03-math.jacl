@@ -1,0 +1,12 @@
+print("Testing addition");
+print_num(+ 2 2);
+print_num(4);
+print("Testing subtraction");
+print_num(- 10 2);
+print_num(8);
+print("Testing multiplication");
+print_num(* 7 2);
+print_num(14);
+print("Testing division");
+print_num(/ 8 4);
+print_num(2);
