@@ -3,5 +3,5 @@
 Make sure you have `fasm` and `cargo` installed.
 ```console
 $ cargo run -- test.jacl
-$ ./asm/test
+$ ./test
 ```
