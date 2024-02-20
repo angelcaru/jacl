@@ -3,7 +3,14 @@ format ELF64
 section '.text' executable
 public print
 public print_num
-public foo ; temporary function to test multiple args
+public read
+read: ; (int, str)
+    xor rax, rax
+    mov rdx, [rsi]
+    inc rsi
+    syscall
+    ret
+
 print:
     mov rax, 1
 
@@ -88,11 +95,4 @@ print_num:
         mov     WORD [rsp], ax
         call    print
         add     rsp, 40
-        ret
-
-foo:
-        push rsi
-        call print_num
-        pop rdi
-        call print_num
         ret

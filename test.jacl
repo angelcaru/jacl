@@ -54,4 +54,8 @@ while < i 10 {
 
 print("---------------------------");
 
-foo(1, 2);
+print("Enter a word:");
+let buf = "************";
+read(0, buf);
+print("Here is your word (if it had <=12 characters):");
+print(buf);
