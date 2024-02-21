@@ -76,6 +76,7 @@ pub mod x86_64 {
         num_vars: usize,
     ) -> std::io::Result<()> {
         use Instruction::*;
+        f.write_all(format!("    ;; {inst:?}\n").as_bytes())?;
         match inst {
             &Prologue(num_params) => {
                 f.write_all(b"    push rbp\n")?;
@@ -169,6 +170,7 @@ pub mod x86_64 {
     }
 
     fn move_value_into_register(f: &mut File, value: &Value, reg: Register) -> std::io::Result<()> {
+        f.write_all(format!("    ;; {reg} <- {value:?}\n").as_bytes())?;
         match value {
             Value::Void => {}
             &Value::String(id) => {
