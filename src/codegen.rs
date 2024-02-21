@@ -24,19 +24,11 @@ pub mod x86_64 {
             f.write_all(b"extrn print_num\n")?;
             f.write_all(b"extrn read\n")?;
             f.write_all(b"public _start\n")?;
-            f.write_all(b"_start:\n")?;
-            f.write_all(b"    push rbp\n")?;
-            f.write_all(b"    mov rbp, rsp\n")?;
-            f.write_all(format!("    sub rsp, {}\n", self.vars.len() * 8).as_bytes())?;
 
-            for instruction in &self.code {
-                compile_inst_to_asm(&mut f, instruction)?;
+            for (name, code) in &self.fn_bodies {
+                let num_vars = self.scopes.get(name).unwrap().len();
+                compile_fun(&mut f, name, code, num_vars)?;
             }
-
-            f.write_all(b"    leave\n")?;
-            f.write_all(b"    mov rax, 60\n")?;
-            f.write_all(b"    mov rdi, 0\n")?;
-            f.write_all(b"    syscall\n")?;
 
             f.write_all(b"section '.data' writable\n")?;
 
@@ -54,6 +46,21 @@ pub mod x86_64 {
         }
     }
 
+    fn compile_fun(
+        f: &mut File,
+        name: &String,
+        code: &Vec<Instruction>,
+        num_vars: usize,
+    ) -> std::io::Result<()> {
+        f.write_all(format!("{}:\n", name).as_bytes())?;
+
+        for instruction in code {
+            compile_inst_to_asm(f, instruction, num_vars)?;
+        }
+
+        Ok(())
+    }
+
     const CALL_CONVENTION: [Register; 6] = [
         Register::Rdi,
         Register::Rsi,
@@ -63,9 +70,31 @@ pub mod x86_64 {
         Register::R9,
     ];
 
-    fn compile_inst_to_asm(f: &mut File, inst: &Instruction) -> std::io::Result<()> {
+    fn compile_inst_to_asm(
+        f: &mut File,
+        inst: &Instruction,
+        num_vars: usize,
+    ) -> std::io::Result<()> {
         use Instruction::*;
         match inst {
+            &Prologue(num_params) => {
+                f.write_all(b"    push rbp\n")?;
+                f.write_all(b"    mov rbp, rsp\n")?;
+                f.write_all(format!("    sub rsp, {}\n", num_vars * 8).as_bytes())?;
+
+                for (i, reg) in CALL_CONVENTION.iter().take(num_params).enumerate() {
+                    f.write_all(format!("    mov [rbp-{}], {}\n", i * 8, reg).as_bytes())?;
+                }
+            }
+            Leave => {
+                f.write_all(b"    leave\n")?;
+                f.write_all(b"    ret\n")?;
+            }
+            Exit(code) => {
+                f.write_all(b"    mov rax, 60\n")?;
+                f.write_all(format!("    mov rdi, {code}\n").as_bytes())?;
+                f.write_all(b"    syscall\n")?;
+            }
             FuncCall(name, args) => {
                 // TODO: add support for more than six args
 

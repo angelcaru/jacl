@@ -45,6 +45,12 @@ pub enum Node {
         cond: Box<Node>,
         body: Box<Node>,
     },
+    FuncDef {
+        loc: Loc,
+        name: String,
+        args: Vec<String>,
+        body: Box<Node>,
+    },
 }
 
 #[derive(Debug)]
@@ -205,11 +211,40 @@ impl Parser {
                     body: Box::new(body),
                 });
             }
+            TokenData::Fun => {
+                let name = self.parse_ident()?;
+                self.expect(TokenData::LParen)?;
+
+                let mut args = vec![self.parse_ident()?];
+                while let Some(TokenData::Comma) = self.peek() {
+                    self.nom();
+                    args.push(self.parse_ident()?);
+                }
+                self.expect(TokenData::RParen)?;
+
+                self.expect(TokenData::LCurly)?;
+                let body = self.parse_block()?;
+
+                return Ok(Node::FuncDef {
+                    loc,
+                    name,
+                    args,
+                    body: Box::new(body),
+                });
+            }
             TokenData::RCurly => Err(ParseError::BlockEnding),
             _ => Err(Error(loc, "Expected statement".into())),
         }?;
         self.expect(TokenData::Semicolon)?;
         Ok(res)
+    }
+
+    fn parse_ident(&mut self) -> ParseResult<String> {
+        if let Some(TokenData::Name(str)) = self.nom() {
+            Ok(str.clone())
+        } else {
+            Err(Error(self.loc(), "Expected identifier".into()))
+        }
     }
 
     fn parse_expr(&mut self) -> ParseResult<Node> {

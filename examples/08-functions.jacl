@@ -1,0 +1,8 @@
+fun foo(a, b) {
+    print_num(+ a b);
+    print_num(* a b);
+}
+
+foo(2, 3);
+foo(20, 24);
+foo(63, 1);
