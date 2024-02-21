@@ -21,6 +21,7 @@ pub mod x86_64 {
             f.write_all(b"format ELF64 \n")?;
             f.write_all(b"section '.text' executable\n")?;
             f.write_all(b"extrn print\n")?; // TODO: unhardcode functions
+            f.write_all(b"extrn printn\n")?;
             f.write_all(b"extrn print_num\n")?;
             f.write_all(b"extrn read\n")?;
             f.write_all(b"public _start\n")?;
@@ -40,6 +41,11 @@ pub mod x86_64 {
                     f.write_all(byte.to_string().as_bytes())?;
                 }
                 f.write_all(b"\n")?;
+            }
+
+            f.write_all(b"section '.bss' writable\n")?;
+            for (id, size) in self.bufs.iter().enumerate() {
+                f.write_all(format!("buf{id}: rb {size}\n").as_bytes())?;
             }
 
             Ok(())
@@ -218,6 +224,9 @@ pub mod x86_64 {
                 })?;
 
                 f.write_all(format!("    mov {}, rax\n", reg).as_bytes())?;
+            }
+            &Value::Buf(id) => {
+                f.write_all(format!("    mov {reg}, buf{id}\n").as_bytes())?;
             }
         }
         Ok(())

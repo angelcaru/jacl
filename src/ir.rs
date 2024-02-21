@@ -10,6 +10,7 @@ pub struct Program {
     pub scopes: HashMap<String, Vec<String>>,
     pub label_count: usize,
     pub fn_bodies: HashMap<String, Vec<Instruction>>,
+    pub bufs: Vec<usize>,
     backpatch_stack: Vec<usize>,
 }
 
@@ -21,6 +22,7 @@ pub enum Value {
     Int(usize),
     BinOp(BinOp, Box<Value>, Box<Value>),
     CmpOp(CmpOp, Box<Value>, Box<Value>),
+    Buf(usize),
 }
 
 #[derive(Debug)]
@@ -95,6 +97,7 @@ impl Program {
             fn_bodies: HashMap::new(),
             scopes: HashMap::new(),
             label_count: 0,
+            bufs: Vec::new(),
             backpatch_stack: Vec::new(),
         };
 
@@ -242,6 +245,10 @@ impl Program {
                 self.fn_bodies.insert(name.clone(), body_code);
                 self.scopes.insert(name.clone(), body_vars);
                 Value::Void
+            }
+            &Node::Buf(size) => {
+                self.bufs.push(size);
+                Value::Buf(self.bufs.len() - 1)
             }
             Node::Nop(_) => Value::Void,
         })

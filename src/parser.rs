@@ -51,6 +51,7 @@ pub enum Node {
         args: Vec<String>,
         body: Box<Node>,
     },
+    Buf(usize),
 }
 
 #[derive(Debug)]
@@ -267,6 +268,14 @@ impl Parser {
             TokenData::Greater => self.parse_cmp_op(CmpOp::Greater),
             TokenData::LtEq => self.parse_cmp_op(CmpOp::LtEq),
             TokenData::GtEq => self.parse_cmp_op(CmpOp::GtEq),
+
+            TokenData::Buf => {
+                if let Some(TokenData::Int(size)) = self.nom() {
+                    Ok(Node::Buf(*size))
+                } else {
+                    Err(Error(loc, "Expected integer literal".into()))
+                }
+            }
 
             _ => Err(Error(loc, "Expected expression".into())),
         }

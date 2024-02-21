@@ -35,6 +35,7 @@ pub enum TokenData {
     While,
     Comma,
     Fun,
+    Buf,
 }
 
 pub struct Lexer<T: Iterator<Item = char>> {
@@ -59,6 +60,7 @@ fn keyword_or_name(name: &str) -> TokenData {
         "unless" => TokenData::Unless,
         "while" => TokenData::While,
         "fun" => TokenData::Fun,
+        "buf" => TokenData::Buf,
         name => TokenData::Name(name.into()),
     }
 }

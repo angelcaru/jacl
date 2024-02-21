@@ -2,23 +2,19 @@ format ELF64
 
 section '.text' executable
 public print
+public printn
 public print_num
 public read
-read: ; (int, str)
+read: ; (int, buf, int)
     xor rax, rax
-    mov rdx, [rsi]
-    inc rsi
     syscall
     ret
 
-print:
-    mov rax, 1
-
-    xor rdx, rdx
-    mov dl, [rdi]
-
-    lea rsi, [rdi+1]
+printn: ; (buf, int)
+    mov rdx, rsi
+    mov rsi, rdi
     mov rdi, 1
+    mov rax, 1
     syscall
 
     push 10
@@ -28,6 +24,15 @@ print:
     mov rdx, 1
     syscall
     pop rax
+
+    ret
+
+print: ; (str)
+    xor rax, rax
+    mov al, byte [rdi]
+    mov rsi, rax
+    inc rdi
+    call printn
     ret
 
 ; print_num function compiled on https://godbolt.org/ from the following C code:
