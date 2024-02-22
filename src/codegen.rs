@@ -102,15 +102,6 @@ pub mod x86_64 {
                 f.write_all(format!("    mov rdi, {code}\n").as_bytes())?;
                 f.write_all(b"    syscall\n")?;
             }
-            FuncCall(name, args) => {
-                // TODO: add support for more than six args
-
-                for (arg, reg) in args.iter().zip(CALL_CONVENTION) {
-                    move_value_into_register(f, arg, reg)?;
-                }
-
-                f.write_all(format!("    call {name}\n").as_bytes())?;
-            }
             VarAssign(id, value) => {
                 move_value_into_register(f, value, Register::Rdi)?;
                 f.write_all(format!("    mov [rbp-{}], rdi\n", id * 8).as_bytes())?;
@@ -132,6 +123,9 @@ pub mod x86_64 {
                 move_value_into_register(f, val, Register::Rbx)?;
                 f.write_all(b"    pop rax\n")?;
                 f.write_all(b"    mov [rax], bl\n")?; // TODO: support different operand sizes
+            }
+            EvalValue(val) => {
+                move_value_into_register(f, val, Register::Rax)?;
             }
         }
 
@@ -266,6 +260,16 @@ pub mod x86_64 {
             }
             &Value::VarAddr(id) => {
                 f.write_all(format!("    lea {}, [rbp-{}]\n", reg, id * 8).as_bytes())?;
+            }
+            Value::FuncCall(name, args) => {
+                // TODO: add support for more than six args
+
+                for (arg, reg) in args.iter().zip(CALL_CONVENTION) {
+                    move_value_into_register(f, arg, reg)?;
+                }
+
+                f.write_all(format!("    call {name}\n").as_bytes())?;
+                f.write_all(format!("    mov {reg}, rax\n").as_bytes())?;
             }
         }
         Ok(())

@@ -126,9 +126,10 @@ impl Parser {
 
     fn parse_statement(&mut self) -> ParseResult<Node> {
         let loc = self.loc();
-        let res = match self.nom().expect("On EOF we shouldn't be here") {
+        let res = match self.peek().expect("On EOF we shouldn't be here") {
             TokenData::Name(name) => {
                 let name = name.clone();
+                self.nom();
 
                 match self.nom() {
                     Some(TokenData::LParen) => {
@@ -144,10 +145,11 @@ impl Parser {
                         let value = self.parse_expr()?;
                         Ok(Node::VarAssign(loc, name, Box::new(value)))
                     }
-                    _ => Err(Error(loc, "Expected '('".into())),
+                    _ => Err(Error(loc, "Expected '(' or '='".into())),
                 }
             }
             TokenData::Let => {
+                self.nom();
                 if let Some(TokenData::Name(name)) = self.nom() {
                     let name = name.clone();
                     self.expect(TokenData::Equals)?;
@@ -158,6 +160,7 @@ impl Parser {
                 }
             }
             TokenData::If => {
+                self.nom();
                 let cond = self.parse_expr()?;
 
                 self.expect(TokenData::LCurly)?;
@@ -188,6 +191,7 @@ impl Parser {
                 }
             }
             TokenData::Unless => {
+                self.nom();
                 let cond = self.parse_expr()?;
 
                 self.expect(TokenData::LCurly)?;
@@ -204,6 +208,7 @@ impl Parser {
                 });
             }
             TokenData::While => {
+                self.nom();
                 let cond = self.parse_expr()?;
 
                 self.expect(TokenData::LCurly)?;
@@ -216,6 +221,7 @@ impl Parser {
                 });
             }
             TokenData::Fun => {
+                self.nom();
                 let name = self.parse_ident()?;
                 self.expect(TokenData::LParen)?;
 
@@ -237,6 +243,7 @@ impl Parser {
                 });
             }
             TokenData::Bang => {
+                self.nom();
                 let ptr = self.parse_expr()?;
                 self.expect(TokenData::Equals)?;
 
@@ -244,8 +251,11 @@ impl Parser {
 
                 Ok(Node::PtrAssign(loc, Box::new(ptr), Box::new(expr)))
             }
-            TokenData::RCurly => Err(ParseError::BlockEnding),
-            _ => Err(Error(loc, "Expected statement".into())),
+            TokenData::RCurly => {
+                self.nom(); // Here it would make sense not to nom() but I don't want to rewrite everything
+                Err(ParseError::BlockEnding)
+            },
+            _ => self.parse_expr(),
         }?;
         self.expect(TokenData::Semicolon)?;
         Ok(res)
@@ -266,7 +276,23 @@ impl Parser {
             .ok_or(Error(loc.clone(), "Expected expression".into()))?
         {
             TokenData::StrLit(string) => Ok(Node::StrLit(loc, string.clone())),
-            TokenData::Name(name) => Ok(Node::VarAccess(loc, name.clone())),
+            TokenData::Name(name) => {
+                let name = name.clone();
+
+                match self.peek() {
+                    Some(TokenData::LParen) => {
+                        self.nom();
+                        let mut args = vec![self.parse_expr()?];
+                        while let Some(TokenData::Comma) = self.peek() {
+                            self.nom();
+                            args.push(self.parse_expr()?);
+                        }
+                        self.expect(TokenData::RParen)?;
+                        Ok(Node::FuncCall(loc, name, args))
+                    }
+                    _ => Ok(Node::VarAccess(loc, name.clone())),
+                }
+            },
             TokenData::Int(int) => Ok(Node::Int(loc, *int)),
 
             TokenData::Plus => self.parse_bin_op(BinOp::Plus),
@@ -335,6 +361,7 @@ impl Parser {
     fn nom(&mut self) -> Option<&TokenData> {
         let tok = self.lexer.get(self.i)?;
         self.i += 1;
+        println!("{:?} nom nom", tok.data);
         Some(&tok.data)
     }
 

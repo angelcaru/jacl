@@ -25,11 +25,11 @@ pub enum Value {
     Buf(usize),
     PtrAccess(Box<Value>),
     VarAddr(usize),
+    FuncCall(String, Vec<Value>),
 }
 
 #[derive(Debug)]
 pub enum Instruction {
-    FuncCall(String, Vec<Value>),
     VarAssign(usize, Value),
     Label(usize),
     JmpIfZero(Value, usize),
@@ -38,6 +38,7 @@ pub enum Instruction {
     Leave,
     Exit(u8),
     PtrAssign(Value, Value),
+    EvalValue(Value),
 }
 
 impl Instruction {
@@ -127,9 +128,7 @@ impl Program {
                     .map(|arg| self.visit(arg, scope, code))
                     .collect();
 
-                code.push(Instruction::FuncCall(name.clone(), args?));
-
-                Value::Void
+                Value::FuncCall(name.clone(), args?)
             }
             Node::StrLit(_, string) => {
                 if let Some(idx) = self.strings.iter().position(|x| x == string) {
@@ -141,7 +140,8 @@ impl Program {
             }
             Node::Block(_, nodes) => {
                 for node in nodes {
-                    self.visit(node, scope, code)?;
+                    let val = self.visit(node, scope, code)?;
+                    code.push(Instruction::EvalValue(val));
                 }
                 Value::Void
             }

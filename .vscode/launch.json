@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["test.jacl"],
+            "args": ["bug.jacl"],
             "cwd": "${workspaceFolder}"
         },
         {

@@ -1,9 +1,11 @@
-let factor = 0;
+let factor = 5;
 
 let text = buf 10;
-read(0, text, 10);
+let text_len = read(0, text, 10);
 
-let text_end = + text 10;
+let text_end = + text text_len;
+print_num(text);
+print_num(text_end);
 let ptr = text;
 
 while < ptr text_end {
