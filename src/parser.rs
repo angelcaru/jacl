@@ -51,7 +51,10 @@ pub enum Node {
         args: Vec<String>,
         body: Box<Node>,
     },
-    Buf(usize),
+    Buf(Loc, usize),
+    PtrAccess(Loc, Box<Node>),
+    PtrAssign(Loc, Box<Node>, Box<Node>),
+    VarAddr(Loc, String),
 }
 
 #[derive(Debug)]
@@ -233,6 +236,14 @@ impl Parser {
                     body: Box::new(body),
                 });
             }
+            TokenData::Bang => {
+                let ptr = self.parse_expr()?;
+                self.expect(TokenData::Equals)?;
+
+                let expr = self.parse_expr()?;
+
+                Ok(Node::PtrAssign(loc, Box::new(ptr), Box::new(expr)))
+            }
             TokenData::RCurly => Err(ParseError::BlockEnding),
             _ => Err(Error(loc, "Expected statement".into())),
         }?;
@@ -271,10 +282,18 @@ impl Parser {
 
             TokenData::Buf => {
                 if let Some(TokenData::Int(size)) = self.nom() {
-                    Ok(Node::Buf(*size))
+                    Ok(Node::Buf(loc, *size))
                 } else {
                     Err(Error(loc, "Expected integer literal".into()))
                 }
+            }
+            TokenData::Bang => {
+                let expr = self.parse_expr()?;
+                Ok(Node::PtrAccess(loc, Box::new(expr)))
+            }
+            TokenData::Amp => {
+                let name = self.parse_ident()?;
+                Ok(Node::VarAddr(loc, name))
             }
 
             _ => Err(Error(loc, "Expected expression".into())),

@@ -126,6 +126,13 @@ pub mod x86_64 {
             Jmp(label_id) => {
                 f.write_all(format!("    jmp label{label_id}\n").as_bytes())?;
             }
+            PtrAssign(ptr, val) => {
+                move_value_into_register(f, ptr, Register::Rax)?;
+                f.write_all(b"    push rax\n")?;
+                move_value_into_register(f, val, Register::Rbx)?;
+                f.write_all(b"    pop rax\n")?;
+                f.write_all(b"    mov [rax], bl\n")?; // TODO: support different operand sizes
+            }
         }
 
         Ok(())
@@ -172,6 +179,29 @@ pub mod x86_64 {
                 Register::R14 => "r14",
                 Register::R15 => "r15",
             })
+        }
+    }
+
+    impl Register {
+        fn as_8bit(&self) -> String {
+            match self {
+                Register::Rax => "al".into(),
+                Register::Rbx => "bl".into(),
+                Register::Rcx => "cl".into(),
+                Register::Rdx => "dl".into(),
+                Register::Rbp => "bl".into(),
+                Register::Rsp => "sl".into(),
+                Register::Rsi => "sil".into(),
+                Register::Rdi => "dil".into(),
+                Register::R8 => "r8d".into(),
+                Register::R9 => "r9d".into(),
+                Register::R10 => "r10d".into(),
+                Register::R11 => "r11d".into(),
+                Register::R12 => "r12d".into(),
+                Register::R13 => "r13d".into(),
+                Register::R14 => "r14d".into(),
+                Register::R15 => "r15d".into(),
+            }
         }
     }
 
@@ -227,6 +257,15 @@ pub mod x86_64 {
             }
             &Value::Buf(id) => {
                 f.write_all(format!("    mov {reg}, buf{id}\n").as_bytes())?;
+            }
+            Value::PtrAccess(ptr) => {
+                move_value_into_register(f, ptr, reg)?;
+                // TODO: support different operand sizes
+                f.write_all(format!("    mov {reg_lower}, [{reg}]\n", reg_lower = reg.as_8bit()).as_bytes())?;
+                f.write_all(format!("    and {reg}, 255\n").as_bytes())?;
+            }
+            &Value::VarAddr(id) => {
+                f.write_all(format!("    lea {}, [rbp-{}]\n", reg, id * 8).as_bytes())?;
             }
         }
         Ok(())

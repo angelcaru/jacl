@@ -1,0 +1,16 @@
+let factor = 0;
+
+let text = buf 10;
+read(0, text, 10);
+
+let text_end = + text 10;
+let ptr = text;
+
+while < ptr text_end {
+    unless == !ptr 0 {
+        !ptr = + !ptr factor;
+    }
+    ptr = + ptr 1;
+}
+
+printn(text, 10);

@@ -36,6 +36,8 @@ pub enum TokenData {
     Comma,
     Fun,
     Buf,
+    Bang,
+    Amp,
 }
 
 pub struct Lexer<T: Iterator<Item = char>> {
@@ -80,6 +82,8 @@ impl<T: Iterator<Item = char>> Iterator for Lexer<T> {
                 '{' => TokenData::LCurly,
                 '}' => TokenData::RCurly,
                 ',' => TokenData::Comma,
+                '!' => TokenData::Bang,
+                '&' => TokenData::Amp,
                 '=' => {
                     if let Some('=') = self.code.peek() {
                         self.loc.advance(self.code.next().unwrap());

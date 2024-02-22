@@ -23,6 +23,8 @@ pub enum Value {
     BinOp(BinOp, Box<Value>, Box<Value>),
     CmpOp(CmpOp, Box<Value>, Box<Value>),
     Buf(usize),
+    PtrAccess(Box<Value>),
+    VarAddr(usize),
 }
 
 #[derive(Debug)]
@@ -35,6 +37,7 @@ pub enum Instruction {
     Prologue(usize),
     Leave,
     Exit(u8),
+    PtrAssign(Value, Value),
 }
 
 impl Instruction {
@@ -111,10 +114,18 @@ impl Program {
         Ok(prog)
     }
 
-    fn visit(&mut self, node: &Node, scope: &mut Vec<String>, code: &mut Vec<Instruction>) -> Result<Value, IRError> {
+    fn visit(
+        &mut self,
+        node: &Node,
+        scope: &mut Vec<String>,
+        code: &mut Vec<Instruction>,
+    ) -> Result<Value, IRError> {
         Ok(match node {
             Node::FuncCall(_, name, args) => {
-                let args: Result<Vec<_>, _> = args.iter().map(|arg| self.visit(arg, scope, code)).collect();
+                let args: Result<Vec<_>, _> = args
+                    .iter()
+                    .map(|arg| self.visit(arg, scope, code))
+                    .collect();
 
                 code.push(Instruction::FuncCall(name.clone(), args?));
 
@@ -142,8 +153,7 @@ impl Program {
                     ));
                 }
                 let value = self.visit(node, scope, code)?;
-                code
-                    .push(Instruction::VarAssign(scope.len(), value));
+                code.push(Instruction::VarAssign(scope.len(), value));
                 scope.push(name.clone());
                 Value::Void
             }
@@ -233,22 +243,41 @@ impl Program {
             } => {
                 let mut body_code = Vec::new();
                 let mut body_vars = Vec::new();
-                
+
                 body_code.push(Instruction::Prologue(args.len()));
                 for arg in args {
                     body_vars.push(arg.clone());
                 }
-                
+
                 self.visit(body, &mut body_vars, &mut body_code)?;
                 body_code.push(Instruction::Leave);
-                
+
                 self.fn_bodies.insert(name.clone(), body_code);
                 self.scopes.insert(name.clone(), body_vars);
                 Value::Void
             }
-            &Node::Buf(size) => {
+            &Node::Buf(_, size) => {
                 self.bufs.push(size);
                 Value::Buf(self.bufs.len() - 1)
+            }
+            Node::PtrAssign(_, ptr, val) => {
+                let ptr = self.visit(ptr, scope, code)?;
+                let val = self.visit(val, scope, code)?;
+
+                code.push(Instruction::PtrAssign(ptr, val));
+
+                Value::Void
+            }
+            Node::PtrAccess(_, ptr) => {
+                let ptr = self.visit(ptr, scope, code)?;
+                Value::PtrAccess(Box::new(ptr))
+            },
+            Node::VarAddr(loc, name) => {
+                if let Some(id) = scope.iter().position(|x| x == name) {
+                    Value::VarAddr(id)
+                } else {
+                    return Err(IRError(loc.clone(), format!("Undeclared variable: {name}")));
+                }
             }
             Node::Nop(_) => Value::Void,
         })
