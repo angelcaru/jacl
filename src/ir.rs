@@ -35,7 +35,7 @@ pub enum Instruction {
     JmpIfZero(Value, usize),
     Jmp(usize),
     Prologue(usize),
-    Leave,
+    Return(Value),
     Exit(u8),
     PtrAssign(Value, Value),
     EvalValue(Value),
@@ -250,7 +250,7 @@ impl Program {
                 }
 
                 self.visit(body, &mut body_vars, &mut body_code)?;
-                body_code.push(Instruction::Leave);
+                body_code.push(Instruction::Return(Value::Void));
 
                 self.fn_bodies.insert(name.clone(), body_code);
                 self.scopes.insert(name.clone(), body_vars);
@@ -278,6 +278,11 @@ impl Program {
                 } else {
                     return Err(IRError(loc.clone(), format!("Undeclared variable: {name}")));
                 }
+            }
+            Node::Return(_, val) => {
+                let val = self.visit(val, scope, code)?;
+                code.push(Instruction::Return(val));
+                Value::Void
             }
             Node::Nop(_) => Value::Void,
         })

@@ -55,6 +55,7 @@ pub enum Node {
     PtrAccess(Loc, Box<Node>),
     PtrAssign(Loc, Box<Node>, Box<Node>),
     VarAddr(Loc, String),
+    Return(Loc, Box<Node>),
 }
 
 #[derive(Debug)]
@@ -254,6 +255,11 @@ impl Parser {
             TokenData::RCurly => {
                 self.nom(); // Here it would make sense not to nom() but I don't want to rewrite everything
                 Err(ParseError::BlockEnding)
+            },
+            TokenData::Return => {
+                self.nom();
+                let expr = self.parse_expr()?;
+                Ok(Node::Return(loc, Box::new(expr)))
             },
             _ => self.parse_expr(),
         }?;

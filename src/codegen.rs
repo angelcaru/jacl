@@ -93,7 +93,8 @@ pub mod x86_64 {
                     f.write_all(format!("    mov [rbp-{}], {}\n", i * 8, reg).as_bytes())?;
                 }
             }
-            Leave => {
+            Return(val) => {
+                move_value_into_register(f, val, Register::Rax)?;
                 f.write_all(b"    leave\n")?;
                 f.write_all(b"    ret\n")?;
             }

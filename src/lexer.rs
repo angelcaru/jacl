@@ -38,6 +38,7 @@ pub enum TokenData {
     Buf,
     Bang,
     Amp,
+    Return
 }
 
 pub struct Lexer<T: Iterator<Item = char>> {
@@ -63,6 +64,7 @@ fn keyword_or_name(name: &str) -> TokenData {
         "while" => TokenData::While,
         "fun" => TokenData::Fun,
         "buf" => TokenData::Buf,
+        "return" => TokenData::Return,
         name => TokenData::Name(name.into()),
     }
 }

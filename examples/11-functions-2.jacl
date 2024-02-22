@@ -1,0 +1,7 @@
+fun multiply(a, b) {
+    return * a b;
+}
+
+print_num(multiply(3, 3));
+print_num(multiply(4, 3));
+print_num(multiply(6, 6));
