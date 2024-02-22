@@ -339,8 +339,13 @@ impl Parser {
     }
 
     fn loc(&self) -> Loc {
+        let i = if self.i < self.lexer.len() {
+            self.i
+        } else {
+            self.i - 1
+        };
         self.lexer
-            .get(self.i.checked_sub(1).unwrap_or(0))
+            .get(i)
             .unwrap()
             .loc
             .clone()
