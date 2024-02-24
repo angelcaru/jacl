@@ -367,7 +367,6 @@ impl Parser {
     fn nom(&mut self) -> Option<&TokenData> {
         let tok = self.lexer.get(self.i)?;
         self.i += 1;
-        println!("{:?} nom nom", tok.data);
         Some(&tok.data)
     }
 
