@@ -4,8 +4,6 @@ let text = buf 10;
 let text_len = read(0, text, 10);
 
 let text_end = + text text_len;
-print_num(text);
-print_num(text_end);
 let ptr = text;
 
 while < ptr text_end {
